@@ -12,3 +12,53 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model TwitterConfiguration {
+  id         String   @id @default(cuid())
+  searchTerm String   @default("")
+  schedule   String   @default("every_hour") // every_5_min, every_10_min, every_30_min, every_hour, every_3_hours, every_6_hours
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model TwitterCredentials {
+  id          String   @id @default(cuid())
+  // OAuth 2.0 credentials (from Developer Portal)
+  clientId    String   @default("")
+  clientSecret String  @default("")
+  // Rapid API
+  rapidApiKey String   @default("")
+  // OAuth 1.0a credentials (from Developer Portal) - kept for future use
+  apiKey      String   @default("")
+  apiSecret   String   @default("")
+  bearerToken String   @default("")
+  // User OAuth tokens (obtained after user login)
+  accessToken       String?
+  refreshToken      String?
+  tokenExpiresAt    DateTime?
+  // Connected user info
+  userId            String?
+  username          String?
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model YouTubeCredentials {
+  id          String   @id @default(cuid())
+  // API Key (for reading public data like comments)
+  apiKey      String   @default("")
+  // OAuth 2.0 credentials (from Google Cloud Console - for replying to comments)
+  clientId    String   @default("")
+  clientSecret String  @default("")
+  // User OAuth tokens (obtained after user login)
+  accessToken       String?
+  refreshToken      String?
+  tokenExpiresAt    DateTime?
+  // Connected user info (channel info)
+  channelId         String?
+  channelTitle      String?
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

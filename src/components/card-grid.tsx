@@ -8,15 +8,27 @@ import {
   Database,
   Settings,
   FileText,
+  User,
 } from "lucide-react";
+import { SettingsModal } from "./settings-modal";
+import { AccountModal } from "./account-modal";
+import { YouTubeAccountModal } from "./youtube-account-modal";
 
 interface PlatformCardProps {
   icon?: React.ReactNode;
   label?: string;
   iconColor?: string;
+  onSettingsClick?: () => void;
+  onAccountClick?: () => void;
 }
 
-function PlatformCard({ icon, label, iconColor }: PlatformCardProps) {
+function PlatformCard({
+  icon,
+  label,
+  iconColor,
+  onSettingsClick,
+  onAccountClick,
+}: PlatformCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -59,6 +71,12 @@ function PlatformCard({ icon, label, iconColor }: PlatformCardProps) {
         <ActionButton
           icon={<Settings className="h-4 w-4" />}
           label="Settings"
+          onClick={onSettingsClick}
+        />
+        <ActionButton
+          icon={<User className="h-4 w-4" />}
+          label="Account"
+          onClick={onAccountClick}
         />
       </div>
     </div>
@@ -68,9 +86,11 @@ function PlatformCard({ icon, label, iconColor }: PlatformCardProps) {
 function ActionButton({
   icon,
   label,
+  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
+  onClick?: () => void;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
@@ -103,6 +123,7 @@ function ActionButton({
       }}
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}
+      onClick={onClick}
       title={label}
       aria-label={label}
     >
@@ -130,23 +151,74 @@ function Logo() {
 }
 
 export function CardGrid() {
+  const [settingsModal, setSettingsModal] = useState<{
+    isOpen: boolean;
+    platform: "twitter" | "youtube";
+  }>({ isOpen: false, platform: "twitter" });
+
+  const [accountModal, setAccountModal] = useState<{
+    isOpen: boolean;
+    platform: "twitter" | "youtube";
+  }>({ isOpen: false, platform: "twitter" });
+
+  const openSettings = (platform: "twitter" | "youtube") => {
+    setSettingsModal({ isOpen: true, platform });
+  };
+
+  const closeSettings = () => {
+    setSettingsModal((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const openAccount = (platform: "twitter" | "youtube") => {
+    setAccountModal({ isOpen: true, platform });
+  };
+
+  const closeAccount = () => {
+    setAccountModal((prev) => ({ ...prev, isOpen: false }));
+  };
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-8">
-      <Logo />
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <PlatformCard
-          icon={<Twitter className="h-12 w-12" />}
-          label="Twitter"
-          iconColor="text-sky-400"
-        />
-        <PlatformCard
-          icon={<Youtube className="h-12 w-12" />}
-          label="YouTube"
-          iconColor="text-red-500"
-        />
-        <PlatformCard label="Coming Soon" />
-        <PlatformCard label="Coming Soon" />
+    <>
+      <div className="flex min-h-screen flex-col items-center justify-center p-8">
+        <Logo />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <PlatformCard
+            icon={<Twitter className="h-12 w-12" />}
+            label="Twitter"
+            iconColor="text-sky-400"
+            onSettingsClick={() => openSettings("twitter")}
+            onAccountClick={() => openAccount("twitter")}
+          />
+          <PlatformCard
+            icon={<Youtube className="h-12 w-12" />}
+            label="YouTube"
+            iconColor="text-red-500"
+            onSettingsClick={() => openSettings("youtube")}
+            onAccountClick={() => openAccount("youtube")}
+          />
+          <PlatformCard label="Coming Soon" />
+          <PlatformCard label="Coming Soon" />
+        </div>
       </div>
-    </div>
+
+      <SettingsModal
+        isOpen={settingsModal.isOpen}
+        onClose={closeSettings}
+        platform={settingsModal.platform}
+      />
+
+      {accountModal.platform === "twitter" ? (
+        <AccountModal
+          isOpen={accountModal.isOpen}
+          onClose={closeAccount}
+          platform="twitter"
+        />
+      ) : (
+        <YouTubeAccountModal
+          isOpen={accountModal.isOpen}
+          onClose={closeAccount}
+        />
+      )}
+    </>
   );
 }

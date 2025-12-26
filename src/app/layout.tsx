@@ -15,8 +15,30 @@ const sixtyfour = Sixtyfour({
 });
 
 export const metadata: Metadata = {
-  title: "viral-kid",
-  description: "Track viral content across platforms",
+  title: "Viral Kid - Social Media Automation",
+  description:
+    "Automate your social media presence with AI-powered replies on Twitter and YouTube. Track trends, engage with your audience, and grow your following.",
+  keywords: [
+    "social media automation",
+    "twitter bot",
+    "youtube automation",
+    "AI replies",
+    "viral content",
+    "social media management",
+  ],
+  authors: [{ name: "Unstable Mind" }],
+  openGraph: {
+    title: "Viral Kid - Social Media Automation",
+    description:
+      "Automate your social media presence with AI-powered replies on Twitter and YouTube.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Viral Kid - Social Media Automation",
+    description:
+      "Automate your social media presence with AI-powered replies on Twitter and YouTube.",
+  },
 };
 
 export default function RootLayout({
