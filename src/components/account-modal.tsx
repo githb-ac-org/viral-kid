@@ -269,32 +269,38 @@ export function AccountModal({
   // Fetch OpenRouter credentials and models
   useEffect(() => {
     if (isOpen && accountId) {
-      fetch(`/api/openrouter/credentials?accountId=${accountId}`)
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch");
-          return res.json();
-        })
-        .then((data) => {
-          if (data.hasApiKey) {
-            setOpenRouterApiKey(data.apiKey);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to fetch OpenRouter credentials:", err);
-        });
-
+      // First fetch models, then credentials (so we can match selectedModel)
       fetch("/api/openrouter/models")
         .then((res) => {
           if (!res.ok) throw new Error("Failed to fetch");
           return res.json();
         })
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setOpenRouterModels(data);
-          }
+        .then((models) => {
+          if (!Array.isArray(models)) return;
+          setOpenRouterModels(models);
+          // Now fetch credentials and match the selected model
+          fetch(`/api/openrouter/credentials?accountId=${accountId}`)
+            .then((res) => {
+              if (!res.ok) throw new Error("Failed to fetch");
+              return res.json();
+            })
+            .then((data) => {
+              if (data.hasApiKey) {
+                setOpenRouterApiKey(data.apiKey);
+              }
+              // Set the selected model from saved credentials
+              if (data.selectedModel) {
+                const savedModel = models.find(
+                  (m: OpenRouterModel) => m.id === data.selectedModel
+                );
+                if (savedModel) {
+                  setSelectedModel(savedModel);
+                }
+              }
+            });
         })
         .catch((err) => {
-          console.error("Failed to fetch OpenRouter models:", err);
+          console.error("Failed to fetch OpenRouter data:", err);
         });
     }
   }, [isOpen, accountId]);
@@ -345,7 +351,9 @@ export function AccountModal({
         throw new Error("Failed to save credentials");
       }
 
-      if (openRouterApiKey) {
+      // Only save/sync if a new API key was entered (not the masked placeholder)
+      const isNewApiKey = openRouterApiKey && !openRouterApiKey.includes("•");
+      if (isNewApiKey) {
         const openRouterRes = await fetch(
           `/api/openrouter/credentials?accountId=${accountId}`,
           {
@@ -466,7 +474,7 @@ export function AccountModal({
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
                     className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-2xl"
-                    style={{ background: "rgba(0,0,0,0.3)" }}
+                    style={{ backgroundColor: "rgba(0,0,0,0.3)" }}
                   >
                     <Loader2 className="h-6 w-6 animate-spin text-white/70" />
                   </motion.div>
@@ -573,7 +581,7 @@ export function AccountModal({
                   {/* Divider */}
                   <div
                     className="w-px self-stretch"
-                    style={{ background: "rgba(255,255,255,0.1)" }}
+                    style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
                   />
 
                   {/* Middle Column - OpenRouter */}
@@ -604,7 +612,9 @@ export function AccountModal({
                           {openRouterModels.length > 0 && (
                             <span
                               className="rounded-full px-2 py-0.5 text-xs font-medium text-white/70"
-                              style={{ background: "rgba(255,255,255,0.1)" }}
+                              style={{
+                                backgroundColor: "rgba(255,255,255,0.1)",
+                              }}
                             >
                               {openRouterModels.length}
                             </span>
@@ -628,7 +638,7 @@ export function AccountModal({
                             whileHover={
                               isSyncingModels || !openRouterApiKey
                                 ? {}
-                                : { background: "rgba(255,255,255,0.1)" }
+                                : { backgroundColor: "rgba(255,255,255,0.1)" }
                             }
                             whileTap={
                               isSyncingModels || !openRouterApiKey
@@ -757,10 +767,31 @@ export function AccountModal({
                                       <motion.button
                                         key={model.id}
                                         type="button"
-                                        onClick={() => {
+                                        onClick={async () => {
                                           setSelectedModel(model);
                                           setIsModelDropdownOpen(false);
                                           setModelSearchQuery("");
+                                          // Save the selected model immediately
+                                          try {
+                                            await fetch(
+                                              `/api/openrouter/credentials?accountId=${accountId}`,
+                                              {
+                                                method: "POST",
+                                                headers: {
+                                                  "Content-Type":
+                                                    "application/json",
+                                                },
+                                                body: JSON.stringify({
+                                                  selectedModel: model.id,
+                                                }),
+                                              }
+                                            );
+                                          } catch (err) {
+                                            console.error(
+                                              "Failed to save model selection:",
+                                              err
+                                            );
+                                          }
                                         }}
                                         className="w-full px-3 py-2.5 text-left text-sm"
                                         style={{
@@ -768,16 +799,17 @@ export function AccountModal({
                                             selectedModel?.id === model.id
                                               ? "rgba(255,255,255,1)"
                                               : "rgba(255,255,255,0.7)",
-                                          background:
+                                          backgroundColor:
                                             selectedModel?.id === model.id
                                               ? "rgba(255,255,255,0.1)"
-                                              : "transparent",
+                                              : "rgba(0,0,0,0)",
                                         }}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: index * 0.01 }}
                                         whileHover={{
-                                          background: "rgba(255,255,255,0.08)",
+                                          backgroundColor:
+                                            "rgba(255,255,255,0.08)",
                                           color: "rgba(255,255,255,0.9)",
                                         }}
                                       >
@@ -828,7 +860,7 @@ export function AccountModal({
                         color: "rgba(255,255,255,0.7)",
                       }}
                       whileHover={{
-                        background: "rgba(255,255,255,0.1)",
+                        backgroundColor: "rgba(255,255,255,0.1)",
                         borderColor: "rgba(255,255,255,0.2)",
                       }}
                       whileTap={{ scale: 0.98 }}
@@ -842,7 +874,7 @@ export function AccountModal({
                   {/* Divider */}
                   <div
                     className="w-px self-stretch"
-                    style={{ background: "rgba(255,255,255,0.1)" }}
+                    style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
                   />
 
                   {/* Right Column - Rapid API */}

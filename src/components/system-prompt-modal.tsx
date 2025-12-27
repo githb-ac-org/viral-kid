@@ -188,8 +188,8 @@ function StyleCheckbox({
     <motion.label
       htmlFor={id}
       className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5"
-      style={{ background: "transparent" }}
-      whileHover={{ background: "rgba(255,255,255,0.05)" }}
+      style={{ backgroundColor: "rgba(0,0,0,0)" }}
+      whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
       transition={{ duration: 0.15 }}
     >
       <div className="relative flex h-4 w-4 shrink-0 items-center justify-center">
@@ -349,7 +349,6 @@ export function SystemPromptModal({
       }
 
       toast.success("System prompt saved");
-      onClose();
     } catch {
       toast.error("Failed to save");
     } finally {
@@ -468,7 +467,7 @@ export function SystemPromptModal({
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
                     className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-2xl"
-                    style={{ background: "rgba(0,0,0,0.3)" }}
+                    style={{ backgroundColor: "rgba(0,0,0,0.3)" }}
                   >
                     <Loader2 className="h-6 w-6 animate-spin text-white/70" />
                   </motion.div>
@@ -637,16 +636,16 @@ You are a helpful social media assistant. Your role is to engage with users in a
                                       selectedSampleId === option.id
                                         ? "rgba(255,255,255,1)"
                                         : "rgba(255,255,255,0.7)",
-                                    background:
+                                    backgroundColor:
                                       selectedSampleId === option.id
                                         ? "rgba(255,255,255,0.1)"
-                                        : "transparent",
+                                        : "rgba(0,0,0,0)",
                                   }}
                                   initial={{ opacity: 0, x: -10 }}
                                   animate={{ opacity: 1, x: 0 }}
                                   transition={{ delay: index * 0.02 }}
                                   whileHover={{
-                                    background: "rgba(255,255,255,0.08)",
+                                    backgroundColor: "rgba(255,255,255,0.08)",
                                     color: "rgba(255,255,255,0.9)",
                                   }}
                                 >

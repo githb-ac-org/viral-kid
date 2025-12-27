@@ -173,7 +173,7 @@ export function ConfirmModal({
               >
                 <div
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconColor}`}
-                  style={{ background: "rgba(255,255,255,0.05)" }}
+                  style={{ backgroundColor: "rgba(255,255,255,0.05)" }}
                 >
                   <AlertTriangle className="h-5 w-5" />
                 </div>

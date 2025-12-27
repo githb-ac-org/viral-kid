@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import {
@@ -13,6 +14,7 @@ import {
   User,
   Plus,
   Trash2,
+  LogOut,
 } from "lucide-react";
 import { SettingsModal } from "./settings-modal";
 import { AccountModal } from "./account-modal";
@@ -21,7 +23,7 @@ import { InstagramAccountModal } from "./instagram-account-modal";
 import { ConfirmModal } from "./confirm-modal";
 import { LogsModal } from "./logs-modal";
 import { DatabaseModal } from "./database-modal";
-import { iconButtonHoverState } from "@/lib/animations";
+import { iconButtonHoverState, buttonHoverState } from "@/lib/animations";
 
 interface Account {
   id: string;
@@ -288,6 +290,12 @@ function ActionButton({
 }
 
 function Logo() {
+  const { data: session } = useSession();
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/login" });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -304,6 +312,33 @@ function Logo() {
       <h1 className="logo-rainbow select-none font-[family-name:var(--font-sixtyfour)] text-4xl tracking-tight">
         Viral Kid
       </h1>
+      {session?.user && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="mt-3 flex items-center justify-center gap-3 border-t border-white/10 pt-3"
+        >
+          <span className="text-sm text-white/50">
+            Logged in as{" "}
+            <span className="text-white/70">{session.user.email}</span>
+          </span>
+          <motion.button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1"
+            style={{
+              color: "rgba(255,255,255,0.5)",
+              backgroundColor: "rgba(255,255,255,0)",
+            }}
+            whileHover={buttonHoverState}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="text-xs font-medium">Logout</span>
+          </motion.button>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

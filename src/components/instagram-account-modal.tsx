@@ -268,34 +268,38 @@ export function InstagramAccountModal({
   // Fetch OpenRouter credentials and models
   useEffect(() => {
     if (isOpen && accountId) {
-      // Fetch OpenRouter credentials
-      fetch(`/api/openrouter/credentials?accountId=${accountId}`)
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch");
-          return res.json();
-        })
-        .then((data) => {
-          if (data.hasApiKey) {
-            setOpenRouterApiKey(data.apiKey);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to fetch OpenRouter credentials:", err);
-        });
-
-      // Fetch cached models
+      // First fetch models, then credentials (so we can match selectedModel)
       fetch("/api/openrouter/models")
         .then((res) => {
           if (!res.ok) throw new Error("Failed to fetch");
           return res.json();
         })
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setOpenRouterModels(data);
-          }
+        .then((models) => {
+          if (!Array.isArray(models)) return;
+          setOpenRouterModels(models);
+          // Now fetch credentials and match the selected model
+          fetch(`/api/openrouter/credentials?accountId=${accountId}`)
+            .then((res) => {
+              if (!res.ok) throw new Error("Failed to fetch");
+              return res.json();
+            })
+            .then((data) => {
+              if (data.hasApiKey) {
+                setOpenRouterApiKey(data.apiKey);
+              }
+              // Set the selected model from saved credentials
+              if (data.selectedModel) {
+                const savedModel = models.find(
+                  (m: OpenRouterModel) => m.id === data.selectedModel
+                );
+                if (savedModel) {
+                  setSelectedModel(savedModel);
+                }
+              }
+            });
         })
         .catch((err) => {
-          console.error("Failed to fetch OpenRouter models:", err);
+          console.error("Failed to fetch OpenRouter data:", err);
         });
     }
   }, [isOpen, accountId]);
@@ -345,8 +349,9 @@ export function InstagramAccountModal({
         throw new Error("Failed to save credentials");
       }
 
-      // Save OpenRouter credentials
-      if (openRouterApiKey) {
+      // Only save/sync if a new API key was entered (not the masked placeholder)
+      const isNewApiKey = openRouterApiKey && !openRouterApiKey.includes("•");
+      if (isNewApiKey) {
         const openRouterRes = await fetch(
           `/api/openrouter/credentials?accountId=${accountId}`,
           {
@@ -756,10 +761,31 @@ export function InstagramAccountModal({
                                       <button
                                         key={model.id}
                                         type="button"
-                                        onClick={() => {
+                                        onClick={async () => {
                                           setSelectedModel(model);
                                           setIsModelDropdownOpen(false);
                                           setModelSearchQuery("");
+                                          // Save the selected model immediately
+                                          try {
+                                            await fetch(
+                                              `/api/openrouter/credentials?accountId=${accountId}`,
+                                              {
+                                                method: "POST",
+                                                headers: {
+                                                  "Content-Type":
+                                                    "application/json",
+                                                },
+                                                body: JSON.stringify({
+                                                  selectedModel: model.id,
+                                                }),
+                                              }
+                                            );
+                                          } catch (err) {
+                                            console.error(
+                                              "Failed to save model selection:",
+                                              err
+                                            );
+                                          }
                                         }}
                                         className="w-full px-3 py-2.5 text-left text-sm transition-all duration-150"
                                         style={{
@@ -767,14 +793,14 @@ export function InstagramAccountModal({
                                             selectedModel?.id === model.id
                                               ? "rgba(255,255,255,1)"
                                               : "rgba(255,255,255,0.7)",
-                                          background:
+                                          backgroundColor:
                                             selectedModel?.id === model.id
                                               ? "rgba(255,255,255,0.1)"
-                                              : "transparent",
+                                              : "rgba(0,0,0,0)",
                                         }}
                                         onMouseEnter={(e) => {
                                           if (selectedModel?.id !== model.id) {
-                                            e.currentTarget.style.background =
+                                            e.currentTarget.style.backgroundColor =
                                               "rgba(255,255,255,0.08)";
                                             e.currentTarget.style.color =
                                               "rgba(255,255,255,0.9)";
@@ -783,7 +809,7 @@ export function InstagramAccountModal({
                                         onMouseLeave={(e) => {
                                           if (selectedModel?.id !== model.id) {
                                             e.currentTarget.style.background =
-                                              "transparent";
+                                              "rgba(0,0,0,0)";
                                             e.currentTarget.style.color =
                                               "rgba(255,255,255,0.7)";
                                           }

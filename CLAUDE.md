@@ -64,6 +64,7 @@ npm run db:studio    # Open Prisma Studio
 Required in `.env`:
 
 - `DATABASE_URL` - PostgreSQL connection string
+- `AUTH_SECRET` - Secret for NextAuth.js session encryption (generate with `openssl rand -base64 32`)
 - `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TWITTER_BEARER_TOKEN`
 - `YOUTUBE_API_KEY`
 

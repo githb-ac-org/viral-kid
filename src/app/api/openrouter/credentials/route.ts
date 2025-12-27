@@ -92,7 +92,8 @@ export async function POST(request: Request) {
       badGrammar?: boolean;
     } = { accountId };
 
-    if (apiKey !== undefined) {
+    // Only save apiKey if it's a real key (not the masked placeholder)
+    if (apiKey !== undefined && !apiKey.includes("•")) {
       updateData.apiKey = apiKey;
       createData.apiKey = apiKey;
     }

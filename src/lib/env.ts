@@ -8,6 +8,9 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
 
+    // Auth
+    AUTH_SECRET: z.string().min(1),
+
     // Twitter API
     TWITTER_API_KEY: z.string().min(1),
     TWITTER_API_SECRET: z.string().min(1),
@@ -30,6 +33,8 @@ export const env = createEnv({
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
+
+    AUTH_SECRET: process.env.AUTH_SECRET,
 
     TWITTER_API_KEY: process.env.TWITTER_API_KEY,
     TWITTER_API_SECRET: process.env.TWITTER_API_SECRET,

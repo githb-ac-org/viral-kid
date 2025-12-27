@@ -232,7 +232,7 @@ export function DatabaseModal({
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     className="rounded-full px-2 py-0.5 text-xs font-medium text-white/70"
-                    style={{ background: "rgba(255,255,255,0.1)" }}
+                    style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
                   >
                     {tweets.length}
                   </motion.span>

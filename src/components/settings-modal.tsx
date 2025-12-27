@@ -261,7 +261,7 @@ export function SettingsModal({
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
                     className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-2xl"
-                    style={{ background: "rgba(0,0,0,0.3)" }}
+                    style={{ backgroundColor: "rgba(0,0,0,0.3)" }}
                   >
                     <Loader2 className="h-6 w-6 animate-spin text-white/70" />
                   </motion.div>
@@ -407,7 +407,7 @@ export function SettingsModal({
                                 backgroundColor:
                                   schedule === option.value
                                     ? "rgba(255,255,255,0.1)"
-                                    : "transparent",
+                                    : "rgba(0,0,0,0)",
                               }}
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}

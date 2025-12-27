@@ -13,7 +13,39 @@ datasource db {
   provider = "postgresql"
 }
 
+// User model for app authentication
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  accounts Account[]
+  sessions Session[]
+
+  @@index([email])
+}
+
+// Session model for authentication
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relation to User
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionToken])
+  @@index([userId])
+}
+
 // Central account model - each card on the dashboard is one account
+// Now linked to User for multi-tenancy (each user has their own isolated accounts)
 model Account {
   id        String   @id @default(cuid())
   platform  String   // "twitter", "youtube", or "instagram"
@@ -21,6 +53,10 @@ model Account {
   order     Int      @default(0) // Display order on dashboard
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Relation to User (for multi-tenancy)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Relations
   twitterCredentials    TwitterCredentials?
@@ -35,6 +71,7 @@ model Account {
 
   @@index([platform])
   @@index([order])
+  @@index([userId])
 }
 
 model TwitterConfiguration {
