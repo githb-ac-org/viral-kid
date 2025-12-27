@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Twitter,
   Youtube,
@@ -18,6 +19,9 @@ import { AccountModal } from "./account-modal";
 import { YouTubeAccountModal } from "./youtube-account-modal";
 import { InstagramAccountModal } from "./instagram-account-modal";
 import { ConfirmModal } from "./confirm-modal";
+import { LogsModal } from "./logs-modal";
+import { DatabaseModal } from "./database-modal";
+import { iconButtonHoverState } from "@/lib/animations";
 
 interface Account {
   id: string;
@@ -31,9 +35,10 @@ interface PlatformCardProps {
   account: Account;
   onSettingsClick: () => void;
   onAccountClick: () => void;
+  onLogsClick: () => void;
+  onDatabaseClick: () => void;
   onDeleteClick: () => void;
   canDelete: boolean;
-  animationClass?: string;
 }
 
 interface AddAccountCardProps {
@@ -41,16 +46,44 @@ interface AddAccountCardProps {
   onClick: () => void;
 }
 
+const cardVariants = {
+  hidden: { opacity: 0, scale: 0.95, y: 20 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    y: -20,
+    transition: {
+      duration: 0.2,
+    },
+  },
+};
+
+const dangerButtonHoverState = {
+  color: "rgba(239,68,68,1)",
+  backgroundColor: "rgba(239,68,68,0.15)",
+  boxShadow:
+    "0 2px 8px rgba(0,0,0,0.3), inset 0 0px 0px rgba(0,0,0,0), inset 0 1px 0 rgba(255,255,255,0.1)",
+};
+
 function PlatformCard({
   account,
   onSettingsClick,
   onAccountClick,
+  onLogsClick,
+  onDatabaseClick,
   onDeleteClick,
   canDelete,
-  animationClass,
 }: PlatformCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
   const icon =
     account.platform === "twitter" ? (
       <Twitter className="h-12 w-12" />
@@ -70,19 +103,20 @@ function PlatformCard({
   const label = account.displayName || account.platform;
 
   return (
-    <div
-      className={`group relative flex h-48 w-72 cursor-pointer flex-col overflow-hidden rounded-2xl border backdrop-blur-xl ${animationClass || ""}`}
+    <motion.div
+      className="group relative flex h-48 w-72 cursor-pointer flex-col overflow-hidden rounded-2xl border backdrop-blur-xl"
       style={{
         background:
           "linear-gradient(to bottom, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)",
-        borderColor: isHovered
-          ? "rgba(255,255,255,0.4)"
-          : "rgba(255,255,255,0.1)",
+        borderColor: "rgba(255,255,255,0.1)",
         boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-        transition: "border-color 0.3s ease",
       }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      whileHover={{ borderColor: "rgba(255,255,255,0.4)" }}
+      transition={{ duration: 0.2 }}
     >
       {/* Label */}
       <div className="relative z-10 flex items-center justify-between px-5 pt-4">
@@ -90,9 +124,13 @@ function PlatformCard({
           {label}
         </h3>
         {account.isConnected && (
-          <span className="rounded-full bg-green-500/20 px-2 py-0.5 text-xs text-green-400">
+          <motion.span
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="rounded-full bg-green-500/20 px-2 py-0.5 text-xs text-green-400"
+          >
             Connected
-          </span>
+          </motion.span>
         )}
       </div>
 
@@ -107,8 +145,13 @@ function PlatformCard({
         <ActionButton
           icon={<Database className="h-4 w-4" />}
           label="Database"
+          onClick={onDatabaseClick}
         />
-        <ActionButton icon={<FileText className="h-4 w-4" />} label="Logs" />
+        <ActionButton
+          icon={<FileText className="h-4 w-4" />}
+          label="Logs"
+          onClick={onLogsClick}
+        />
         <ActionButton
           icon={<Settings className="h-4 w-4" />}
           label="Settings"
@@ -128,14 +171,11 @@ function PlatformCard({
           />
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 function AddAccountCard({ platform, onClick }: AddAccountCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isPressed, setIsPressed] = useState(false);
-
   const icon =
     platform === "twitter" ? (
       <Twitter className="h-8 w-8" />
@@ -158,48 +198,52 @@ function AddAccountCard({ platform, onClick }: AddAccountCardProps) {
         ? "text-red-500"
         : "text-pink-500";
 
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
       className="group relative flex h-48 w-72 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border backdrop-blur-xl"
       style={{
         background:
           "linear-gradient(to bottom, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
-        borderColor: isHovered
-          ? "rgba(255,255,255,0.4)"
-          : "rgba(255,255,255,0.1)",
+        borderColor: "rgba(255,255,255,0.1)",
         borderStyle: "dashed",
         boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-        transform: isPressed ? "scale(0.98)" : "scale(1)",
-        transition: "border-color 0.3s ease, transform 0.15s ease",
       }}
+      whileHover={{
+        borderColor: "rgba(255,255,255,0.4)",
+      }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.2 }}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        setIsPressed(false);
-      }}
-      onMouseDown={() => setIsPressed(true)}
-      onMouseUp={() => setIsPressed(false)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <div className="flex items-center gap-2">
-        <div className={isHovered ? iconColorHover : iconColor}>{icon}</div>
-        <Plus
-          className="h-6 w-6"
-          style={{
+        <motion.div
+          className={isHovered ? iconColorHover : iconColor}
+          animate={{ color: isHovered ? undefined : undefined }}
+        >
+          {icon}
+        </motion.div>
+        <motion.div
+          animate={{
             color: isHovered
               ? "rgba(255,255,255,0.8)"
               : "rgba(255,255,255,0.3)",
-            transition: "color 0.3s ease",
           }}
-        />
+          transition={{ duration: 0.2 }}
+        >
+          <Plus className="h-6 w-6" />
+        </motion.div>
       </div>
-      <span
+      <motion.span
         className="mt-3 text-sm font-semibold tracking-wide"
-        style={{
+        animate={{
           color: isHovered ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.4)",
-          transition: "color 0.3s ease",
         }}
+        transition={{ duration: 0.2 }}
       >
         Add{" "}
         {platform === "twitter"
@@ -207,8 +251,8 @@ function AddAccountCard({ platform, onClick }: AddAccountCardProps) {
           : platform === "youtube"
             ? "YouTube"
             : "Instagram"}
-      </span>
-    </button>
+      </motion.span>
+    </motion.button>
   );
 }
 
@@ -223,55 +267,33 @@ function ActionButton({
   onClick?: () => void;
   variant?: "default" | "danger";
 }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isPressed, setIsPressed] = useState(false);
-
-  const defaultShadow =
-    "0 0px 0px rgba(0,0,0,0), inset 0 1px 2px rgba(0,0,0,0.2), inset 0 0px 0px rgba(255,255,255,0)";
-  const hoverShadow =
-    "0 2px 8px rgba(0,0,0,0.3), inset 0 0px 0px rgba(0,0,0,0), inset 0 1px 0 rgba(255,255,255,0.1)";
-
-  const hoverColor =
-    variant === "danger" ? "rgba(239,68,68,1)" : "rgba(255,255,255,1)";
-  const hoverBg =
-    variant === "danger" ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.1)";
-  const pressedBg =
-    variant === "danger" ? "rgba(239,68,68,0.1)" : "rgba(255,255,255,0.05)";
-
   return (
-    <button
+    <motion.button
       className="relative rounded-lg px-2 py-2"
       style={{
-        color: isHovered ? hoverColor : "rgba(255,255,255,0.5)",
-        backgroundColor: isPressed
-          ? pressedBg
-          : isHovered
-            ? hoverBg
-            : "rgba(255,255,255,0)",
-        boxShadow: isHovered ? hoverShadow : defaultShadow,
-        transform: isPressed ? "scale(0.95)" : "scale(1)",
-        transition:
-          "color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease",
+        color: "rgba(255,255,255,0.5)",
+        backgroundColor: "rgba(255,255,255,0)",
       }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        setIsPressed(false);
-      }}
-      onMouseDown={() => setIsPressed(true)}
-      onMouseUp={() => setIsPressed(false)}
+      whileHover={
+        variant === "danger" ? dangerButtonHoverState : iconButtonHoverState
+      }
+      whileTap={{ scale: 0.95 }}
+      transition={{ duration: 0.15 }}
       onClick={onClick}
       title={label}
       aria-label={label}
     >
       {icon}
-    </button>
+    </motion.button>
   );
 }
 
 function Logo() {
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="mb-12 rounded-2xl border border-white/10 px-8 py-4 backdrop-blur-xl"
       style={{
         background:
@@ -283,7 +305,7 @@ function Logo() {
       <h1 className="logo-rainbow select-none font-[family-name:var(--font-sixtyfour)] text-4xl tracking-tight">
         Viral Kid
       </h1>
-    </div>
+    </motion.div>
   );
 }
 
@@ -309,10 +331,17 @@ export function CardGrid() {
     platform: "twitter" | "youtube" | "instagram";
   }>({ isOpen: false, accountId: "", platform: "twitter" });
 
-  // Track which cards are animating out
-  const [exitingCards, setExitingCards] = useState<Set<string>>(new Set());
-  // Track newly added cards for enter animation
-  const [newCards, setNewCards] = useState<Set<string>>(new Set());
+  const [logsModal, setLogsModal] = useState<{
+    isOpen: boolean;
+    platform: "twitter" | "youtube" | "instagram";
+    accountId: string;
+  }>({ isOpen: false, platform: "twitter", accountId: "" });
+
+  const [databaseModal, setDatabaseModal] = useState<{
+    isOpen: boolean;
+    platform: "twitter" | "youtube" | "instagram";
+    accountId: string;
+  }>({ isOpen: false, platform: "twitter", accountId: "" });
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -369,18 +398,6 @@ export function CardGrid() {
 
       if (!res.ok) throw new Error("Failed to create account");
 
-      const newAccount = await res.json();
-      // Mark the new card for enter animation
-      setNewCards((prev) => new Set(prev).add(newAccount.id));
-      // Remove from new cards after animation completes
-      setTimeout(() => {
-        setNewCards((prev) => {
-          const next = new Set(prev);
-          next.delete(newAccount.id);
-          return next;
-        });
-      }, 300);
-
       await fetchAccounts();
     } catch (error) {
       console.error("Failed to create account:", error);
@@ -402,37 +419,18 @@ export function CardGrid() {
   const handleDeleteAccount = async () => {
     const accountId = deleteModal.accountId;
 
-    // Start exit animation
-    setExitingCards((prev) => new Set(prev).add(accountId));
+    try {
+      const res = await fetch(`/api/accounts/${accountId}`, {
+        method: "DELETE",
+      });
 
-    // Wait for animation to complete before actually deleting
-    setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/accounts/${accountId}`, {
-          method: "DELETE",
-        });
+      if (!res.ok) throw new Error("Failed to delete account");
 
-        if (!res.ok) throw new Error("Failed to delete account");
-
-        // Optimistically remove from accounts state (no refetch needed)
-        setAccounts((prev) => prev.filter((a) => a.id !== accountId));
-
-        // Remove from exiting set
-        setExitingCards((prev) => {
-          const next = new Set(prev);
-          next.delete(accountId);
-          return next;
-        });
-      } catch (error) {
-        console.error("Failed to delete account:", error);
-        // Remove from exiting set on error too
-        setExitingCards((prev) => {
-          const next = new Set(prev);
-          next.delete(accountId);
-          return next;
-        });
-      }
-    }, 200);
+      // Optimistically remove from accounts state (no refetch needed)
+      setAccounts((prev) => prev.filter((a) => a.id !== accountId));
+    } catch (error) {
+      console.error("Failed to delete account:", error);
+    }
   };
 
   const openSettings = (account: Account) => {
@@ -461,6 +459,30 @@ export function CardGrid() {
     fetchAccounts();
   };
 
+  const openLogs = (account: Account) => {
+    setLogsModal({
+      isOpen: true,
+      platform: account.platform,
+      accountId: account.id,
+    });
+  };
+
+  const closeLogs = () => {
+    setLogsModal((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const openDatabase = (account: Account) => {
+    setDatabaseModal({
+      isOpen: true,
+      platform: account.platform,
+      accountId: account.id,
+    });
+  };
+
+  const closeDatabase = () => {
+    setDatabaseModal((prev) => ({ ...prev, isOpen: false }));
+  };
+
   // Separate accounts by platform
   const twitterAccounts = accounts.filter((a) => a.platform === "twitter");
   const youtubeAccounts = accounts.filter((a) => a.platform === "youtube");
@@ -479,99 +501,72 @@ export function CardGrid() {
         {/* Three columns: Twitter, YouTube, Instagram */}
         <div className="flex gap-6">
           {/* Twitter Column */}
-          <div className="card-column">
-            {!isLoading &&
-              twitterAccounts.map((account) => (
-                <div
-                  key={account.id}
-                  className={`card-wrapper ${exitingCards.has(account.id) ? "exiting" : ""}`}
-                >
+          <div className="flex flex-col gap-4">
+            <AnimatePresence mode="popLayout">
+              {!isLoading &&
+                twitterAccounts.map((account) => (
                   <PlatformCard
+                    key={account.id}
                     account={account}
                     onSettingsClick={() => openSettings(account)}
                     onAccountClick={() => openAccount(account)}
+                    onLogsClick={() => openLogs(account)}
+                    onDatabaseClick={() => openDatabase(account)}
                     onDeleteClick={() => openDeleteModal(account)}
                     canDelete={account.id !== firstTwitterId}
-                    animationClass={
-                      exitingCards.has(account.id)
-                        ? "card-exit"
-                        : newCards.has(account.id)
-                          ? "card-enter"
-                          : ""
-                    }
                   />
-                </div>
-              ))}
-            <div className="card-wrapper">
-              <AddAccountCard
-                platform="twitter"
-                onClick={() => handleCreateAccount("twitter")}
-              />
-            </div>
+                ))}
+            </AnimatePresence>
+            <AddAccountCard
+              platform="twitter"
+              onClick={() => handleCreateAccount("twitter")}
+            />
           </div>
 
           {/* YouTube Column */}
-          <div className="card-column">
-            {!isLoading &&
-              youtubeAccounts.map((account) => (
-                <div
-                  key={account.id}
-                  className={`card-wrapper ${exitingCards.has(account.id) ? "exiting" : ""}`}
-                >
+          <div className="flex flex-col gap-4">
+            <AnimatePresence mode="popLayout">
+              {!isLoading &&
+                youtubeAccounts.map((account) => (
                   <PlatformCard
+                    key={account.id}
                     account={account}
                     onSettingsClick={() => openSettings(account)}
                     onAccountClick={() => openAccount(account)}
+                    onLogsClick={() => openLogs(account)}
+                    onDatabaseClick={() => openDatabase(account)}
                     onDeleteClick={() => openDeleteModal(account)}
                     canDelete={account.id !== firstYoutubeId}
-                    animationClass={
-                      exitingCards.has(account.id)
-                        ? "card-exit"
-                        : newCards.has(account.id)
-                          ? "card-enter"
-                          : ""
-                    }
                   />
-                </div>
-              ))}
-            <div className="card-wrapper">
-              <AddAccountCard
-                platform="youtube"
-                onClick={() => handleCreateAccount("youtube")}
-              />
-            </div>
+                ))}
+            </AnimatePresence>
+            <AddAccountCard
+              platform="youtube"
+              onClick={() => handleCreateAccount("youtube")}
+            />
           </div>
 
           {/* Instagram Column */}
-          <div className="card-column">
-            {!isLoading &&
-              instagramAccounts.map((account) => (
-                <div
-                  key={account.id}
-                  className={`card-wrapper ${exitingCards.has(account.id) ? "exiting" : ""}`}
-                >
+          <div className="flex flex-col gap-4">
+            <AnimatePresence mode="popLayout">
+              {!isLoading &&
+                instagramAccounts.map((account) => (
                   <PlatformCard
+                    key={account.id}
                     account={account}
                     onSettingsClick={() => openSettings(account)}
                     onAccountClick={() => openAccount(account)}
+                    onLogsClick={() => openLogs(account)}
+                    onDatabaseClick={() => openDatabase(account)}
                     onDeleteClick={() => openDeleteModal(account)}
                     canDelete={account.id !== firstInstagramId}
-                    animationClass={
-                      exitingCards.has(account.id)
-                        ? "card-exit"
-                        : newCards.has(account.id)
-                          ? "card-enter"
-                          : ""
-                    }
                   />
-                </div>
-              ))}
-            <div className="card-wrapper">
-              <AddAccountCard
-                platform="instagram"
-                onClick={() => handleCreateAccount("instagram")}
-              />
-            </div>
+                ))}
+            </AnimatePresence>
+            <AddAccountCard
+              platform="instagram"
+              onClick={() => handleCreateAccount("instagram")}
+            />
           </div>
         </div>
       </div>
@@ -613,6 +608,20 @@ export function CardGrid() {
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="danger"
+      />
+
+      <LogsModal
+        isOpen={logsModal.isOpen}
+        onClose={closeLogs}
+        accountId={logsModal.accountId}
+        platform={logsModal.platform}
+      />
+
+      <DatabaseModal
+        isOpen={databaseModal.isOpen}
+        onClose={closeDatabase}
+        accountId={databaseModal.accountId}
+        platform={databaseModal.platform}
       />
     </>
   );

@@ -23,24 +23,28 @@ model Account {
   updatedAt DateTime @updatedAt
 
   // Relations
-  twitterCredentials   TwitterCredentials?
-  twitterConfig        TwitterConfiguration?
-  youtubeCredentials   YouTubeCredentials?
-  youtubeConfig        YouTubeConfiguration?
-  instagramCredentials InstagramCredentials?
-  instagramConfig      InstagramConfiguration?
+  twitterCredentials    TwitterCredentials?
+  twitterConfig         TwitterConfiguration?
+  youtubeCredentials    YouTubeCredentials?
+  youtubeConfig         YouTubeConfiguration?
+  instagramCredentials  InstagramCredentials?
+  instagramConfig       InstagramConfiguration?
+  openRouterCredentials OpenRouterCredentials?
+  logs                  Log[]
+  tweetInteractions     TweetInteraction[]
 }
 
 model TwitterConfiguration {
-  id         String   @id @default(cuid())
-  searchTerm String   @default("")
-  schedule   String   @default("every_hour") // every_5_min, every_10_min, every_30_min, every_hour, every_3_hours, every_6_hours
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                String   @id @default(cuid())
+  searchTerm        String   @default("")
+  schedule          String   @default("every_hour") // every_5_min, every_10_min, every_30_min, every_hour, every_3_hours, every_6_hours
+  minimumLikesCount Int      @default(20) // Minimum likes filter for search
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relation to Account
-  accountId  String   @unique
-  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId         String   @unique
+  account           Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 }
 
 model TwitterCredentials {
@@ -136,4 +140,76 @@ model InstagramCredentials {
   // Relation to Account
   accountId   String   @unique
   account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+// OpenRouter credentials - per account for API access
+model OpenRouterCredentials {
+  id           String   @id @default(cuid())
+  apiKey       String   @default("")
+  systemPrompt String?  // Custom system prompt for AI agents
+  selectedModel String? // Selected LLM model ID
+  // Style options (injected into system prompt)
+  noHashtags      Boolean @default(false)
+  noEmojis        Boolean @default(false)
+  noCapitalization Boolean @default(false)
+  badGrammar      Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relation to Account
+  accountId    String   @unique
+  account      Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+// OpenRouter models - global cache of available models
+model OpenRouterModel {
+  id              String   @id // Use the model ID from OpenRouter (e.g., "openai/gpt-4")
+  name            String   // Display name
+  description     String?  // Model description
+  contextLength   Int      @default(0) // Max context length
+  pricing         String?  // JSON string with pricing info
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([name])
+}
+
+// Log entries for tracking account activity
+model Log {
+  id        String   @id @default(cuid())
+  level     String   // "info", "warning", "error", "success"
+  message   String
+  metadata  String?  // JSON string for additional context
+  createdAt DateTime @default(now())
+
+  // Relation to Account
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([createdAt])
+}
+
+// Tweet interactions - tracks viral tweets and our responses
+model TweetInteraction {
+  id            String   @id @default(cuid())
+  tweetId       String   // Original tweet ID from Twitter
+  userTweet     String   // The original tweet content
+  username      String   // Username of the original tweeter
+  views         Int      @default(0)
+  hearts        Int      @default(0)
+  replies       Int      @default(0) // Reply count
+  ourReply      String?  // Our response tweet content
+  ourReplyId    String?  // Our reply tweet ID
+  repliedAt     DateTime? // When we replied
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relation to Account
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, tweetId])
+  @@index([accountId])
+  @@index([createdAt])
 }

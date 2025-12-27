@@ -1,7 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronDown, Loader2 } from "lucide-react";
+import {
+  backdropVariants,
+  modalVariants,
+  dropdownVariants,
+  iconButtonHoverState,
+  buttonHoverState,
+} from "@/lib/animations";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -30,18 +38,10 @@ function ModalButton({
   disabled?: boolean;
   variant?: "primary" | "secondary";
 }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isPressed, setIsPressed] = useState(false);
-
-  const defaultShadow =
-    "0 0px 0px rgba(0,0,0,0), inset 0 1px 2px rgba(0,0,0,0.2), inset 0 0px 0px rgba(255,255,255,0)";
-  const hoverShadow =
-    "0 2px 8px rgba(0,0,0,0.3), inset 0 0px 0px rgba(0,0,0,0), inset 0 1px 0 rgba(255,255,255,0.1)";
-
   const isPrimary = variant === "primary";
 
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
       disabled={disabled}
@@ -49,36 +49,22 @@ function ModalButton({
       style={{
         color: disabled
           ? "rgba(255,255,255,0.3)"
-          : isHovered
-            ? "rgba(255,255,255,1)"
-            : isPrimary
-              ? "rgba(255,255,255,0.9)"
-              : "rgba(255,255,255,0.5)",
+          : isPrimary
+            ? "rgba(255,255,255,0.9)"
+            : "rgba(255,255,255,0.5)",
         backgroundColor: disabled
           ? "rgba(255,255,255,0.02)"
-          : isPressed
-            ? "rgba(255,255,255,0.05)"
-            : isHovered
-              ? "rgba(255,255,255,0.15)"
-              : isPrimary
-                ? "rgba(255,255,255,0.1)"
-                : "rgba(255,255,255,0.05)",
-        boxShadow: isHovered && !disabled ? hoverShadow : defaultShadow,
-        transform: isPressed && !disabled ? "scale(0.98)" : "scale(1)",
-        transition:
-          "color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease",
+          : isPrimary
+            ? "rgba(255,255,255,0.1)"
+            : "rgba(255,255,255,0.05)",
         cursor: disabled ? "not-allowed" : "pointer",
       }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        setIsPressed(false);
-      }}
-      onMouseDown={() => !disabled && setIsPressed(true)}
-      onMouseUp={() => setIsPressed(false)}
+      whileHover={disabled ? {} : buttonHoverState}
+      whileTap={disabled ? {} : { scale: 0.98 }}
+      transition={{ duration: 0.15 }}
     >
       {children}
-    </button>
+    </motion.button>
   );
 }
 
@@ -91,43 +77,23 @@ function IconButton({
   onClick?: () => void;
   label: string;
 }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isPressed, setIsPressed] = useState(false);
-
-  const defaultShadow =
-    "0 0px 0px rgba(0,0,0,0), inset 0 1px 2px rgba(0,0,0,0.2), inset 0 0px 0px rgba(255,255,255,0)";
-  const hoverShadow =
-    "0 2px 8px rgba(0,0,0,0.3), inset 0 0px 0px rgba(0,0,0,0), inset 0 1px 0 rgba(255,255,255,0.1)";
-
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
       className="relative rounded-lg p-2"
       style={{
-        color: isHovered ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.5)",
-        backgroundColor: isPressed
-          ? "rgba(255,255,255,0.05)"
-          : isHovered
-            ? "rgba(255,255,255,0.1)"
-            : "rgba(255,255,255,0)",
-        boxShadow: isHovered ? hoverShadow : defaultShadow,
-        transform: isPressed ? "scale(0.95)" : "scale(1)",
-        transition:
-          "color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease",
+        color: "rgba(255,255,255,0.5)",
+        backgroundColor: "rgba(255,255,255,0)",
       }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        setIsPressed(false);
-      }}
-      onMouseDown={() => setIsPressed(true)}
-      onMouseUp={() => setIsPressed(false)}
+      whileHover={iconButtonHoverState}
+      whileTap={{ scale: 0.95 }}
+      transition={{ duration: 0.15 }}
       title={label}
       aria-label={label}
     >
       {icon}
-    </button>
+    </motion.button>
   );
 }
 
@@ -139,33 +105,29 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [schedule, setSchedule] = useState("every_hour");
+  const [minimumLikesCount, setMinimumLikesCount] = useState(20);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [dropdownHovered, setDropdownHovered] = useState<string | null>(null);
-  const [isDropdownButtonHovered, setIsDropdownButtonHovered] = useState(false);
 
-  // Animation states
-  const [isVisible, setIsVisible] = useState(false);
-  const [shouldRender, setShouldRender] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Handle open/close animations
+  // Close dropdown when clicking outside
   useEffect(() => {
-    if (isOpen) {
-      setShouldRender(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsVisible(true);
-        });
-      });
-      return;
+    if (!isDropdownOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
     }
-    setIsVisible(false);
-    const timer = setTimeout(() => {
-      setShouldRender(false);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [isOpen]);
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isDropdownOpen]);
 
   useEffect(() => {
     if (isOpen && accountId) {
@@ -189,10 +151,11 @@ export function SettingsModal({
           if (data.schedule) {
             setSchedule(data.schedule);
           }
+          if (data.minimumLikesCount !== undefined) {
+            setMinimumLikesCount(data.minimumLikesCount);
+          }
         })
-        .catch(() => {
-          // Database not available - use defaults
-        })
+        .catch(() => {})
         .finally(() => setIsLoading(false));
     }
   }, [isOpen, platform, accountId]);
@@ -211,7 +174,7 @@ export function SettingsModal({
 
       const body =
         platform === "twitter"
-          ? JSON.stringify({ searchTerm, schedule })
+          ? JSON.stringify({ searchTerm, schedule, minimumLikesCount })
           : JSON.stringify({ schedule });
 
       const res = await fetch(apiPath, {
@@ -232,218 +195,260 @@ export function SettingsModal({
     }
   };
 
-  if (!shouldRender) return null;
-
   const selectedScheduleLabel =
     SCHEDULE_OPTIONS.find((opt) => opt.value === schedule)?.label ??
     "Select schedule";
 
+  const platformTitle =
+    platform === "twitter"
+      ? "Twitter"
+      : platform === "youtube"
+        ? "YouTube"
+        : "Instagram";
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{
-        opacity: isVisible ? 1 : 0,
-        transition: "opacity 0.2s ease-out",
-      }}
-    >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div
-        className="relative z-10 w-full max-w-md rounded-2xl border backdrop-blur-xl"
-        style={{
-          background:
-            "linear-gradient(to bottom, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)",
-          borderColor: "rgba(255,255,255,0.1)",
-          boxShadow:
-            "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.2)",
-          transform: isVisible
-            ? "scale(1) translateY(0)"
-            : "scale(0.95) translateY(10px)",
-          transition: "transform 0.2s ease-out",
-        }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <h2 className="text-sm font-semibold tracking-wide text-white/90">
-            {platform === "twitter" ? "Twitter" : "YouTube"} Settings
-          </h2>
-          <IconButton
-            icon={<X className="h-4 w-4" />}
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <motion.div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            variants={backdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            transition={{ duration: 0.2 }}
             onClick={onClose}
-            label="Close"
           />
-        </div>
 
-        {/* Content */}
-        <div className="p-6">
-          {/* Loading overlay with fade */}
-          <div
-            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-2xl"
+          {/* Modal */}
+          <motion.div
+            className="relative z-10 w-full max-w-md rounded-2xl border backdrop-blur-xl"
             style={{
-              opacity: isLoading ? 1 : 0,
-              transition: "opacity 0.2s ease-out",
-              background: "rgba(0,0,0,0.3)",
+              background:
+                "linear-gradient(to bottom, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)",
+              borderColor: "rgba(255,255,255,0.1)",
+              boxShadow:
+                "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.2)",
             }}
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
           >
-            <Loader2 className="h-6 w-6 animate-spin text-white/70" />
-          </div>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+              <h2 className="text-sm font-semibold tracking-wide text-white/90">
+                {platformTitle} Settings
+              </h2>
+              <IconButton
+                icon={<X className="h-4 w-4" />}
+                onClick={onClose}
+                label="Close"
+              />
+            </div>
 
-          {/* Content with fade */}
-          <div
-            style={{
-              opacity: isLoading ? 0.3 : 1,
-              transition: "opacity 0.2s ease-out",
-            }}
-          >
-            <>
-              {/* Search Term Input - Twitter only */}
-              {platform === "twitter" && (
-                <div className="mb-5">
-                  <label
-                    htmlFor="searchTerm"
-                    className="mb-2 block text-sm font-semibold tracking-wide text-white/90"
+            {/* Content */}
+            <div className="p-6">
+              {/* Loading overlay */}
+              <AnimatePresence>
+                {isLoading && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-2xl"
+                    style={{ background: "rgba(0,0,0,0.3)" }}
                   >
-                    Search Term
-                  </label>
-                  <input
-                    id="searchTerm"
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Enter search term..."
-                    className="w-full rounded-lg border px-4 py-3 text-white/90 outline-none backdrop-blur-xl"
-                    style={{
-                      background: "rgba(255,255,255,0.05)",
-                      borderColor: "rgba(255,255,255,0.1)",
-                      transition:
-                        "border-color 0.3s ease, background 0.3s ease",
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = "rgba(255,255,255,0.3)";
-                      e.target.style.background = "rgba(255,255,255,0.08)";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = "rgba(255,255,255,0.1)";
-                      e.target.style.background = "rgba(255,255,255,0.05)";
-                    }}
-                  />
-                </div>
-              )}
+                    <Loader2 className="h-6 w-6 animate-spin text-white/70" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              {/* Schedule Dropdown */}
-              <div className="mb-6">
-                <label className="mb-2 block text-sm font-semibold tracking-wide text-white/90">
-                  Schedule
-                </label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    onMouseEnter={() => setIsDropdownButtonHovered(true)}
-                    onMouseLeave={() => setIsDropdownButtonHovered(false)}
-                    className="flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left backdrop-blur-xl"
-                    style={{
-                      background: isDropdownButtonHovered
-                        ? "rgba(255,255,255,0.08)"
-                        : "rgba(255,255,255,0.05)",
-                      borderColor: isDropdownOpen
-                        ? "rgba(255,255,255,0.3)"
-                        : isDropdownButtonHovered
-                          ? "rgba(255,255,255,0.2)"
-                          : "rgba(255,255,255,0.1)",
-                      transition:
-                        "border-color 0.3s ease, background 0.3s ease",
-                    }}
-                  >
-                    <span className="text-white/90">
-                      {selectedScheduleLabel}
-                    </span>
-                    <ChevronDown
-                      className="h-5 w-5 text-white/50"
+              <motion.div
+                animate={{ opacity: isLoading ? 0.3 : 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {/* Search Term Input - Twitter only */}
+                {platform === "twitter" && (
+                  <div className="mb-5">
+                    <label
+                      htmlFor="searchTerm"
+                      className="mb-2 block text-sm font-semibold tracking-wide text-white/90"
+                    >
+                      Search Term
+                    </label>
+                    <input
+                      id="searchTerm"
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Enter search term..."
+                      className="w-full rounded-lg border px-4 py-3 text-white/90 outline-none backdrop-blur-xl transition-all duration-200"
                       style={{
-                        transform: isDropdownOpen
-                          ? "rotate(180deg)"
-                          : "rotate(0deg)",
-                        transition: "transform 0.3s ease",
+                        background: "rgba(255,255,255,0.05)",
+                        borderColor: "rgba(255,255,255,0.1)",
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = "rgba(255,255,255,0.3)";
+                        e.target.style.background = "rgba(255,255,255,0.08)";
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = "rgba(255,255,255,0.1)";
+                        e.target.style.background = "rgba(255,255,255,0.05)";
                       }}
                     />
-                  </button>
+                  </div>
+                )}
 
-                  {isDropdownOpen && (
-                    <div
-                      className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border backdrop-blur-xl"
-                      style={{
-                        background:
-                          "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
-                        borderColor: "rgba(255,255,255,0.15)",
-                        boxShadow:
-                          "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)",
-                      }}
+                {/* Minimum Likes Count - Twitter only */}
+                {platform === "twitter" && (
+                  <div className="mb-5">
+                    <label
+                      htmlFor="minimumLikesCount"
+                      className="mb-2 block text-sm font-semibold tracking-wide text-white/90"
                     >
-                      {SCHEDULE_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => {
-                            setSchedule(option.value);
-                            setIsDropdownOpen(false);
-                          }}
-                          onMouseEnter={() => setDropdownHovered(option.value)}
-                          onMouseLeave={() => setDropdownHovered(null)}
-                          className="w-full px-4 py-3 text-left"
+                      Minimum Likes
+                    </label>
+                    <input
+                      id="minimumLikesCount"
+                      type="number"
+                      min="0"
+                      value={minimumLikesCount}
+                      onChange={(e) =>
+                        setMinimumLikesCount(
+                          Math.max(0, parseInt(e.target.value) || 0)
+                        )
+                      }
+                      placeholder="20"
+                      className="w-full rounded-lg border px-4 py-3 text-white/90 outline-none backdrop-blur-xl transition-all duration-200"
+                      style={{
+                        background: "rgba(255,255,255,0.05)",
+                        borderColor: "rgba(255,255,255,0.1)",
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = "rgba(255,255,255,0.3)";
+                        e.target.style.background = "rgba(255,255,255,0.08)";
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = "rgba(255,255,255,0.1)";
+                        e.target.style.background = "rgba(255,255,255,0.05)";
+                      }}
+                    />
+                    <p className="mt-1 text-xs text-white/40">
+                      Only show tweets with at least this many likes
+                    </p>
+                  </div>
+                )}
+
+                {/* Schedule Dropdown */}
+                <div className="mb-6">
+                  <label className="mb-2 block text-sm font-semibold tracking-wide text-white/90">
+                    Schedule
+                  </label>
+                  <div className="relative" ref={dropdownRef}>
+                    <motion.button
+                      type="button"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left backdrop-blur-xl"
+                      style={{
+                        background: "rgba(255,255,255,0.05)",
+                        borderColor: isDropdownOpen
+                          ? "rgba(255,255,255,0.3)"
+                          : "rgba(255,255,255,0.1)",
+                      }}
+                      whileHover={{ borderColor: "rgba(255,255,255,0.2)" }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <span className="text-white/90">
+                        {selectedScheduleLabel}
+                      </span>
+                      <motion.div
+                        animate={{ rotate: isDropdownOpen ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronDown className="h-5 w-5 text-white/50" />
+                      </motion.div>
+                    </motion.button>
+
+                    <AnimatePresence>
+                      {isDropdownOpen && (
+                        <motion.div
+                          variants={dropdownVariants}
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                          className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border backdrop-blur-xl"
                           style={{
-                            color:
-                              schedule === option.value ||
-                              dropdownHovered === option.value
-                                ? "rgba(255,255,255,1)"
-                                : "rgba(255,255,255,0.5)",
-                            backgroundColor:
-                              schedule === option.value
-                                ? "rgba(255,255,255,0.1)"
-                                : dropdownHovered === option.value
-                                  ? "rgba(255,255,255,0.08)"
-                                  : "transparent",
-                            transition:
-                              "color 0.3s ease, background-color 0.3s ease",
+                            background:
+                              "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
+                            borderColor: "rgba(255,255,255,0.15)",
+                            boxShadow:
+                              "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)",
                           }}
                         >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                          {SCHEDULE_OPTIONS.map((option, index) => (
+                            <motion.button
+                              key={option.value}
+                              type="button"
+                              onClick={() => {
+                                setSchedule(option.value);
+                                setIsDropdownOpen(false);
+                              }}
+                              className="w-full px-4 py-3 text-left"
+                              style={{
+                                color:
+                                  schedule === option.value
+                                    ? "rgba(255,255,255,1)"
+                                    : "rgba(255,255,255,0.5)",
+                                backgroundColor:
+                                  schedule === option.value
+                                    ? "rgba(255,255,255,0.1)"
+                                    : "transparent",
+                              }}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.02 }}
+                              whileHover={{
+                                backgroundColor: "rgba(255,255,255,0.08)",
+                                color: "rgba(255,255,255,1)",
+                              }}
+                            >
+                              {option.label}
+                            </motion.button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 border-t border-white/10 pt-6">
-                <ModalButton onClick={onClose} variant="secondary">
-                  Cancel
-                </ModalButton>
-                <ModalButton
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  variant="primary"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save"
-                  )}
-                </ModalButton>
-              </div>
-            </>
-          </div>
+                {/* Action Buttons */}
+                <div className="flex gap-3 border-t border-white/10 pt-6">
+                  <ModalButton onClick={onClose} variant="secondary">
+                    Cancel
+                  </ModalButton>
+                  <ModalButton
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    variant="primary"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save"
+                    )}
+                  </ModalButton>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }

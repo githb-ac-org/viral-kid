@@ -124,3 +124,13 @@ body {
   -webkit-text-fill-color: transparent;
   animation: hueRotate 3s linear infinite;
 }
+
+/* Hide default scrollbars globally */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
