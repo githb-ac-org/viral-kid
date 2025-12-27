@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 
 const ShaderGradientCanvas = dynamic(
   () => import("@shadergradient/react").then((mod) => mod.ShaderGradientCanvas),
@@ -13,14 +13,19 @@ const ShaderGradientComponent = dynamic(
   { ssr: false }
 );
 
-export function ShaderBackground() {
-  const [isLoaded, setIsLoaded] = useState(false);
+interface ShaderBackgroundProps {
+  onLoad?: () => void;
+}
 
+export function ShaderBackground({ onLoad }: ShaderBackgroundProps) {
   useEffect(() => {
-    // Wait for WebGL canvas to fully initialize and render first frame
-    const timer = setTimeout(() => setIsLoaded(true), 300);
+    // Wait for WebGL canvas to fully initialize, start animating, and render several frames
+    // This ensures the animation is already in motion before revealing
+    const timer = setTimeout(() => {
+      onLoad?.();
+    }, 1200);
     return () => clearTimeout(timer);
-  }, []);
+  }, [onLoad]);
 
   return (
     <div
@@ -32,8 +37,6 @@ export function ShaderBackground() {
         height: "100vh",
         zIndex: 0,
         pointerEvents: "none",
-        opacity: isLoaded ? 1 : 0,
-        transition: "opacity 1s ease-out",
       }}
     >
       <ShaderGradientCanvas
