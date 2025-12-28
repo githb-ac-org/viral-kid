@@ -482,6 +482,7 @@ export function SystemPromptModal({
               </AnimatePresence>
 
               <motion.div
+                initial={{ opacity: 1 }}
                 animate={{ opacity: isLoading ? 0.3 : 1 }}
                 transition={{ duration: 0.2 }}
               >
