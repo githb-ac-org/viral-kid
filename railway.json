@@ -12,8 +12,6 @@
   "variables": {
     "DATABASE_URL": "${{Postgres.DATABASE_URL}}",
     "REDIS_URL": "${{Redis.REDIS_URL}}",
-    "AUTH_SECRET": "",
-    "AUTH_URL": "",
     "NODE_ENV": "production"
   }
 }
