@@ -14,8 +14,13 @@ export const env = createEnv({
     // Redis (for job queues)
     REDIS_URL: z.string().url().optional(),
 
-    // Cron authentication
-    CRON_SECRET: z.string().min(1).optional(),
+    // Cron authentication (required in production)
+    CRON_SECRET:
+      process.env.NODE_ENV === "production"
+        ? z
+            .string()
+            .min(32, "CRON_SECRET must be at least 32 characters in production")
+        : z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),

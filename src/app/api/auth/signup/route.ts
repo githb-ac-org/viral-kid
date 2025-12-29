@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { getRedisClient } from "@/lib/redis";
 
-// Simple in-memory rate limiter for signup
-const signupAttempts = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_WINDOW = 15 * 60; // 15 minutes in seconds
 const MAX_ATTEMPTS = 5; // 5 attempts per window
 
 function getClientIp(request: Request): string {
@@ -15,28 +14,32 @@ function getClientIp(request: Request): string {
   return request.headers.get("x-real-ip") || "unknown";
 }
 
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const record = signupAttempts.get(ip);
+async function isRateLimited(ip: string): Promise<boolean> {
+  try {
+    const redis = getRedisClient();
+    const key = `signup_rate_limit:${ip}`;
 
-  if (!record || now > record.resetAt) {
-    signupAttempts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    const count = await redis.incr(key);
+
+    // Set expiry on first request
+    if (count === 1) {
+      await redis.expire(key, RATE_LIMIT_WINDOW);
+    }
+
+    return count > MAX_ATTEMPTS;
+  } catch (error) {
+    // If Redis is unavailable, allow the request (fail open)
+    // but log the error
+    console.error("Rate limit check failed:", error);
     return false;
   }
-
-  if (record.count >= MAX_ATTEMPTS) {
-    return true;
-  }
-
-  record.count++;
-  return false;
 }
 
 export async function POST(request: Request) {
   try {
     // Rate limit check
     const clientIp = getClientIp(request);
-    if (isRateLimited(clientIp)) {
+    if (await isRateLimited(clientIp)) {
       return NextResponse.json(
         { error: "Too many signup attempts. Please try again later." },
         { status: 429 }
