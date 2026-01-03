@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { TwitterApi } from "twitter-api-v2";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { createAccountLog } from "@/lib/account-log";
 
 interface TweetResult {
   __typename: string;
@@ -52,16 +53,6 @@ interface ParsedTweet {
   views: number;
   hearts: number;
   replies: number;
-}
-
-async function createLog(
-  accountId: string,
-  level: "info" | "warning" | "error" | "success",
-  message: string
-) {
-  await db.log.create({
-    data: { accountId, level, message },
-  });
 }
 
 async function refreshTokenIfNeeded(
@@ -307,7 +298,7 @@ export async function POST(request: Request) {
 
     // Validate credentials
     if (!twitterCredentials?.rapidApiKey) {
-      await createLog(accountId, "error", "RapidAPI key not configured");
+      await createAccountLog(accountId, "error", "RapidAPI key not configured");
       return NextResponse.json(
         { error: "RapidAPI key not configured" },
         { status: 400 }
@@ -315,7 +306,7 @@ export async function POST(request: Request) {
     }
 
     if (!twitterCredentials?.accessToken) {
-      await createLog(accountId, "error", "Twitter OAuth not connected");
+      await createAccountLog(accountId, "error", "Twitter OAuth not connected");
       return NextResponse.json(
         { error: "Twitter OAuth not connected" },
         { status: 400 }
@@ -323,7 +314,11 @@ export async function POST(request: Request) {
     }
 
     if (!openRouterCredentials?.apiKey) {
-      await createLog(accountId, "error", "OpenRouter API key not configured");
+      await createAccountLog(
+        accountId,
+        "error",
+        "OpenRouter API key not configured"
+      );
       return NextResponse.json(
         { error: "OpenRouter API key not configured" },
         { status: 400 }
@@ -331,14 +326,14 @@ export async function POST(request: Request) {
     }
 
     if (!openRouterCredentials?.selectedModel) {
-      await createLog(accountId, "error", "No LLM model selected");
+      await createAccountLog(accountId, "error", "No LLM model selected");
       return NextResponse.json(
         { error: "No LLM model selected" },
         { status: 400 }
       );
     }
 
-    await createLog(accountId, "info", "Pipeline started");
+    await createAccountLog(accountId, "info", "Pipeline started");
 
     // Step 1: Refresh token if needed
     const accessToken = await refreshTokenIfNeeded(
@@ -354,7 +349,11 @@ export async function POST(request: Request) {
     );
 
     if (!accessToken) {
-      await createLog(accountId, "error", "Failed to get valid access token");
+      await createAccountLog(
+        accountId,
+        "error",
+        "Failed to get valid access token"
+      );
       return NextResponse.json(
         { error: "Twitter authentication failed" },
         { status: 401 }
@@ -365,7 +364,7 @@ export async function POST(request: Request) {
     const searchTerm = twitterConfig?.searchTerm || "viral";
     const minimumLikesCount = twitterConfig?.minimumLikesCount ?? 20;
 
-    await createLog(
+    await createAccountLog(
       accountId,
       "info",
       `Searching for "${searchTerm}" with min ${minimumLikesCount} likes`
@@ -381,12 +380,12 @@ export async function POST(request: Request) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to fetch tweets";
-      await createLog(accountId, "error", message);
+      await createAccountLog(accountId, "error", message);
       return NextResponse.json({ error: message }, { status: 500 });
     }
 
     if (tweets.length === 0) {
-      await createLog(
+      await createAccountLog(
         accountId,
         "warning",
         "No tweets found matching criteria"
@@ -398,7 +397,7 @@ export async function POST(request: Request) {
       });
     }
 
-    await createLog(accountId, "info", `Found ${tweets.length} tweets`);
+    await createAccountLog(accountId, "info", `Found ${tweets.length} tweets`);
 
     // Step 3: Store tweets temporarily and filter out already replied
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -422,7 +421,7 @@ export async function POST(request: Request) {
     );
 
     if (unrepliedTweets.length === 0) {
-      await createLog(
+      await createAccountLog(
         accountId,
         "warning",
         "All found tweets have been replied to"
@@ -443,7 +442,7 @@ export async function POST(request: Request) {
 
     const bestTweet = unrepliedTweets[0]!;
 
-    await createLog(
+    await createAccountLog(
       accountId,
       "info",
       `Selected tweet by @${bestTweet.username} (${bestTweet.hearts} likes, ${bestTweet.replies} replies)`
@@ -468,11 +467,11 @@ export async function POST(request: Request) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to generate reply";
-      await createLog(accountId, "error", `LLM error: ${message}`);
+      await createAccountLog(accountId, "error", `LLM error: ${message}`);
       return NextResponse.json({ error: message }, { status: 500 });
     }
 
-    await createLog(
+    await createAccountLog(
       accountId,
       "info",
       `Generated reply: "${generatedReply.slice(0, 50)}..."`
@@ -491,11 +490,15 @@ export async function POST(request: Request) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to post reply";
-      await createLog(accountId, "error", `Twitter API error: ${message}`);
+      await createAccountLog(
+        accountId,
+        "error",
+        `Twitter API error: ${message}`
+      );
       return NextResponse.json({ error: message }, { status: 500 });
     }
 
-    await createLog(
+    await createAccountLog(
       accountId,
       "success",
       `Posted reply to @${bestTweet.username}`
@@ -542,7 +545,7 @@ export async function POST(request: Request) {
     } catch (dbError) {
       console.error("Failed to store interaction:", dbError);
       // Reply was posted successfully, just log the DB error
-      await createLog(
+      await createAccountLog(
         accountId,
         "warning",
         "Reply posted but failed to record in database"

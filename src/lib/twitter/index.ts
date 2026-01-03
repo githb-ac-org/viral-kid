@@ -22,12 +22,7 @@
  */
 
 // Re-export clients
-export {
-  twitter,
-  twitterRW,
-  twitterClient,
-  twitterUserClient,
-} from "./clients";
+export { twitter, twitterRW } from "./clients";
 
 // Reply functionality
 export {

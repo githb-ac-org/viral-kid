@@ -1,19 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { generateOAuthState } from "@/lib/oauth";
 
 // Reddit OAuth 2.0 endpoints
 const REDDIT_AUTH_URL = "https://www.reddit.com/api/v1/authorize";
 
 // Reddit API scopes for reading posts and posting comments
 const REDDIT_SCOPES = "identity read submit";
-
-function generateState(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
-    ""
-  );
-}
 
 export async function GET(request: Request) {
   try {
@@ -41,7 +34,7 @@ export async function GET(request: Request) {
     const callbackUrl = `${reqUrl.origin}/api/reddit/callback`;
 
     // Generate state for CSRF protection
-    const state = generateState();
+    const state = generateOAuthState();
 
     // Build the authorization URL
     const authParams = new URLSearchParams({

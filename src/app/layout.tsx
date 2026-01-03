@@ -51,18 +51,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" style={{ backgroundColor: "#0a0a0a" }}>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `document.documentElement.style.backgroundColor='#0a0a0a';document.body&&(document.body.style.backgroundColor='#0a0a0a');`,
-          }}
-        />
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `html,body{background-color:#0a0a0a!important}`,
-          }}
-        />
-      </head>
       <body
         className={`${roboto.className} ${bbhBartle.variable}`}
         style={{ backgroundColor: "#0a0a0a" }}

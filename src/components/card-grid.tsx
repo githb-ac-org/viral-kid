@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -1253,17 +1253,33 @@ export function CardGrid() {
     }
   };
 
-  // Separate accounts by platform
-  const twitterAccounts = accounts.filter((a) => a.platform === "twitter");
-  const youtubeAccounts = accounts.filter((a) => a.platform === "youtube");
-  const instagramAccounts = accounts.filter((a) => a.platform === "instagram");
-  const redditAccounts = accounts.filter((a) => a.platform === "reddit");
+  // Separate accounts by platform (memoized to avoid filtering on every render)
+  const {
+    twitterAccounts,
+    youtubeAccounts,
+    instagramAccounts,
+    redditAccounts,
+  } = useMemo(
+    () => ({
+      twitterAccounts: accounts.filter((a) => a.platform === "twitter"),
+      youtubeAccounts: accounts.filter((a) => a.platform === "youtube"),
+      instagramAccounts: accounts.filter((a) => a.platform === "instagram"),
+      redditAccounts: accounts.filter((a) => a.platform === "reddit"),
+    }),
+    [accounts]
+  );
 
   // Find the first account of each platform (these cannot be deleted)
-  const firstTwitterId = twitterAccounts[0]?.id;
-  const firstYoutubeId = youtubeAccounts[0]?.id;
-  const firstInstagramId = instagramAccounts[0]?.id;
-  const firstRedditId = redditAccounts[0]?.id;
+  const { firstTwitterId, firstYoutubeId, firstInstagramId, firstRedditId } =
+    useMemo(
+      () => ({
+        firstTwitterId: twitterAccounts[0]?.id,
+        firstYoutubeId: youtubeAccounts[0]?.id,
+        firstInstagramId: instagramAccounts[0]?.id,
+        firstRedditId: redditAccounts[0]?.id,
+      }),
+      [twitterAccounts, youtubeAccounts, instagramAccounts, redditAccounts]
+    );
 
   // Get accounts for the selected platform (mobile)
   const getAccountsForPlatform = (platform: Platform) => {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { createAccountLog } from "@/lib/account-log";
 import {
   refreshTokenIfNeeded,
   fetchChannelVideos,
@@ -8,16 +9,6 @@ import {
   postCommentReply,
   type YouTubeComment,
 } from "@/lib/youtube/client";
-
-async function createLog(
-  accountId: string,
-  level: "info" | "warning" | "error" | "success",
-  message: string
-) {
-  await db.log.create({
-    data: { accountId, level, message },
-  });
-}
 
 async function generateReplyWithLLM(
   apiKey: string,
@@ -148,7 +139,7 @@ export async function POST(request: Request) {
 
     // Validate credentials
     if (!youtubeCredentials?.accessToken) {
-      await createLog(accountId, "error", "YouTube OAuth not connected");
+      await createAccountLog(accountId, "error", "YouTube OAuth not connected");
       return NextResponse.json(
         { error: "YouTube OAuth not connected" },
         { status: 400 }
@@ -156,7 +147,7 @@ export async function POST(request: Request) {
     }
 
     if (!youtubeCredentials?.channelId) {
-      await createLog(accountId, "error", "YouTube channel not linked");
+      await createAccountLog(accountId, "error", "YouTube channel not linked");
       return NextResponse.json(
         { error: "YouTube channel not linked" },
         { status: 400 }
@@ -164,7 +155,11 @@ export async function POST(request: Request) {
     }
 
     if (!openRouterCredentials?.apiKey) {
-      await createLog(accountId, "error", "OpenRouter API key not configured");
+      await createAccountLog(
+        accountId,
+        "error",
+        "OpenRouter API key not configured"
+      );
       return NextResponse.json(
         { error: "OpenRouter API key not configured" },
         { status: 400 }
@@ -172,14 +167,14 @@ export async function POST(request: Request) {
     }
 
     if (!openRouterCredentials?.selectedModel) {
-      await createLog(accountId, "error", "No LLM model selected");
+      await createAccountLog(accountId, "error", "No LLM model selected");
       return NextResponse.json(
         { error: "No LLM model selected" },
         { status: 400 }
       );
     }
 
-    await createLog(accountId, "info", "YouTube pipeline started");
+    await createAccountLog(accountId, "info", "YouTube pipeline started");
 
     // Step 1: Refresh token if needed
     const tokenResult = await refreshTokenIfNeeded({
@@ -191,7 +186,11 @@ export async function POST(request: Request) {
     });
 
     if (!tokenResult) {
-      await createLog(accountId, "error", "Failed to get valid access token");
+      await createAccountLog(
+        accountId,
+        "error",
+        "Failed to get valid access token"
+      );
       return NextResponse.json(
         { error: "YouTube authentication failed" },
         { status: 401 }
@@ -219,12 +218,16 @@ export async function POST(request: Request) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to fetch videos";
-      await createLog(accountId, "error", message);
+      await createAccountLog(accountId, "error", message);
       return NextResponse.json({ error: message }, { status: 500 });
     }
 
     if (videos.length === 0) {
-      await createLog(accountId, "warning", "No videos found on channel");
+      await createAccountLog(
+        accountId,
+        "warning",
+        "No videos found on channel"
+      );
       return NextResponse.json({
         success: true,
         replied: false,
@@ -232,7 +235,7 @@ export async function POST(request: Request) {
       });
     }
 
-    await createLog(accountId, "info", `Found ${videos.length} videos`);
+    await createAccountLog(accountId, "info", `Found ${videos.length} videos`);
 
     // Step 3: Fetch comments from all videos
     const allComments: YouTubeComment[] = [];
@@ -257,7 +260,7 @@ export async function POST(request: Request) {
     }
 
     if (allComments.length === 0) {
-      await createLog(
+      await createAccountLog(
         accountId,
         "warning",
         `No comments found with at least ${minimumLikesCount} likes`
@@ -269,7 +272,7 @@ export async function POST(request: Request) {
       });
     }
 
-    await createLog(
+    await createAccountLog(
       accountId,
       "info",
       `Found ${allComments.length} comments with ${minimumLikesCount}+ likes`
@@ -295,7 +298,7 @@ export async function POST(request: Request) {
     );
 
     if (unrepliedComments.length === 0) {
-      await createLog(
+      await createAccountLog(
         accountId,
         "warning",
         "All found comments have been replied to"
@@ -311,7 +314,7 @@ export async function POST(request: Request) {
     unrepliedComments.sort((a, b) => b.likeCount - a.likeCount);
     const bestComment = unrepliedComments[0]!;
 
-    await createLog(
+    await createAccountLog(
       accountId,
       "info",
       `Selected comment by ${bestComment.authorName} (${bestComment.likeCount} likes) on "${bestComment.videoTitle}"`
@@ -337,11 +340,11 @@ export async function POST(request: Request) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to generate reply";
-      await createLog(accountId, "error", `LLM error: ${message}`);
+      await createAccountLog(accountId, "error", `LLM error: ${message}`);
       return NextResponse.json({ error: message }, { status: 500 });
     }
 
-    await createLog(
+    await createAccountLog(
       accountId,
       "info",
       `Generated reply: "${generatedReply.slice(0, 50)}..."`
@@ -358,11 +361,15 @@ export async function POST(request: Request) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to post reply";
-      await createLog(accountId, "error", `YouTube API error: ${message}`);
+      await createAccountLog(
+        accountId,
+        "error",
+        `YouTube API error: ${message}`
+      );
       return NextResponse.json({ error: message }, { status: 500 });
     }
 
-    await createLog(
+    await createAccountLog(
       accountId,
       "success",
       `Posted reply to ${bestComment.authorName}`
@@ -412,7 +419,7 @@ export async function POST(request: Request) {
     } catch (dbError) {
       console.error("Failed to store interaction:", dbError);
       // Reply was posted successfully, just log the DB error
-      await createLog(
+      await createAccountLog(
         accountId,
         "warning",
         "Reply posted but failed to record in database"

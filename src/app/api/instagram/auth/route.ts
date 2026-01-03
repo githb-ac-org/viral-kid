@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { generateOAuthState } from "@/lib/oauth";
 
 // Facebook OAuth 2.0 endpoint (Instagram uses Facebook Login)
 const FACEBOOK_AUTH_URL = "https://www.facebook.com/v21.0/dialog/oauth";
@@ -13,14 +14,6 @@ const INSTAGRAM_SCOPES = [
   "instagram_manage_messages",
   "business_management",
 ].join(",");
-
-function generateState(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
-    ""
-  );
-}
 
 export async function GET(request: Request) {
   try {
@@ -48,7 +41,7 @@ export async function GET(request: Request) {
     const callbackUrl = `${reqUrl.origin}/api/instagram/callback`;
 
     // Generate state for CSRF protection
-    const state = generateState();
+    const state = generateOAuthState();
 
     // Build the authorization URL
     const authParams = new URLSearchParams({

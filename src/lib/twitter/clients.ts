@@ -13,9 +13,3 @@ export const twitterRW = new TwitterApi({
 
 // Read-only client using bearer token (app-only auth)
 export const twitter = new TwitterApi(process.env.TWITTER_BEARER_TOKEN || "");
-
-// Alias for backwards compatibility
-export const twitterClient = twitter;
-
-// User client (same as read-write for now)
-export const twitterUserClient = twitterRW;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import {
@@ -95,6 +95,17 @@ export function AccountModal({
 
   // Ref for click-outside handling
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Memoize filtered models to avoid duplicate filtering
+  const filteredModels = useMemo(
+    () =>
+      openRouterModels.filter(
+        (model) =>
+          model.name.toLowerCase().includes(modelSearchQuery.toLowerCase()) ||
+          model.id.toLowerCase().includes(modelSearchQuery.toLowerCase())
+      ),
+    [openRouterModels, modelSearchQuery]
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -681,20 +692,7 @@ export function AccountModal({
                                   className="max-h-48 overflow-y-auto"
                                   data-lenis-prevent
                                 >
-                                  {openRouterModels
-                                    .filter(
-                                      (model) =>
-                                        model.name
-                                          .toLowerCase()
-                                          .includes(
-                                            modelSearchQuery.toLowerCase()
-                                          ) ||
-                                        model.id
-                                          .toLowerCase()
-                                          .includes(
-                                            modelSearchQuery.toLowerCase()
-                                          )
-                                    )
+                                  {filteredModels
                                     .slice(0, 100)
                                     .map((model, index) => (
                                       <motion.button
@@ -759,19 +757,7 @@ export function AccountModal({
                                         </div>
                                       </motion.button>
                                     ))}
-                                  {openRouterModels.filter(
-                                    (model) =>
-                                      model.name
-                                        .toLowerCase()
-                                        .includes(
-                                          modelSearchQuery.toLowerCase()
-                                        ) ||
-                                      model.id
-                                        .toLowerCase()
-                                        .includes(
-                                          modelSearchQuery.toLowerCase()
-                                        )
-                                  ).length === 0 && (
+                                  {filteredModels.length === 0 && (
                                     <p className="px-3 py-4 text-center text-xs text-white/40">
                                       No models found
                                     </p>
