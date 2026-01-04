@@ -209,6 +209,24 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check account limit per platform (max 3)
+    const MAX_ACCOUNTS_PER_PLATFORM = 3;
+    const existingCount = await db.account.count({
+      where: {
+        userId: session.user.id,
+        platform,
+      },
+    });
+
+    if (existingCount >= MAX_ACCOUNTS_PER_PLATFORM) {
+      return NextResponse.json(
+        {
+          error: `Maximum of ${MAX_ACCOUNTS_PER_PLATFORM} accounts per platform reached`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Get the highest order value for this user
     const lastAccount = await db.account.findFirst({
       where: { userId: session.user.id },

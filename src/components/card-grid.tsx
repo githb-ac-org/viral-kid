@@ -539,6 +539,8 @@ function ActionButton({
 
 type Platform = "twitter" | "youtube" | "instagram" | "reddit";
 
+const MAX_ACCOUNTS_PER_PLATFORM = 3;
+
 const platformConfig: Record<
   Platform,
   { icon: React.ReactNode; label: string; color: string; activeColor: string }
@@ -1052,6 +1054,23 @@ export function CardGrid() {
   const handleCreateAccount = async (
     platform: "twitter" | "youtube" | "instagram" | "reddit"
   ) => {
+    // Check if platform limit is reached
+    const platformAccounts = accounts.filter((a) => a.platform === platform);
+    if (platformAccounts.length >= MAX_ACCOUNTS_PER_PLATFORM) {
+      const platformLabel =
+        platform === "twitter"
+          ? "Twitter"
+          : platform === "youtube"
+            ? "YouTube"
+            : platform === "instagram"
+              ? "Instagram"
+              : "Reddit";
+      toast.error(
+        `Maximum of ${MAX_ACCOUNTS_PER_PLATFORM} ${platformLabel} accounts reached`
+      );
+      return;
+    }
+
     try {
       const res = await fetch("/api/accounts", {
         method: "POST",
@@ -1059,12 +1078,17 @@ export function CardGrid() {
         body: JSON.stringify({ platform }),
       });
 
-      if (!res.ok) throw new Error("Failed to create account");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create account");
+      }
 
       await fetchAccounts();
       toast.success("Account created");
-    } catch {
-      toast.error("Failed to create account");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create account"
+      );
     }
   };
 
@@ -1324,10 +1348,12 @@ export function CardGrid() {
                 isToggling={togglingAccounts.has(account.id)}
               />
             ))}
-          <MobileAddCard
-            platform={selectedPlatform}
-            onClick={() => handleCreateAccount(selectedPlatform)}
-          />
+          {selectedAccounts.length < MAX_ACCOUNTS_PER_PLATFORM && (
+            <MobileAddCard
+              platform={selectedPlatform}
+              onClick={() => handleCreateAccount(selectedPlatform)}
+            />
+          )}
         </div>
 
         {/* Desktop: Four columns */}
@@ -1353,10 +1379,12 @@ export function CardGrid() {
                   />
                 ))}
             </AnimatePresence>
-            <AddAccountCard
-              platform="twitter"
-              onClick={() => handleCreateAccount("twitter")}
-            />
+            {twitterAccounts.length < MAX_ACCOUNTS_PER_PLATFORM && (
+              <AddAccountCard
+                platform="twitter"
+                onClick={() => handleCreateAccount("twitter")}
+              />
+            )}
           </div>
 
           {/* YouTube Column */}
@@ -1380,10 +1408,12 @@ export function CardGrid() {
                   />
                 ))}
             </AnimatePresence>
-            <AddAccountCard
-              platform="youtube"
-              onClick={() => handleCreateAccount("youtube")}
-            />
+            {youtubeAccounts.length < MAX_ACCOUNTS_PER_PLATFORM && (
+              <AddAccountCard
+                platform="youtube"
+                onClick={() => handleCreateAccount("youtube")}
+              />
+            )}
           </div>
 
           {/* Instagram Column */}
@@ -1407,10 +1437,12 @@ export function CardGrid() {
                   />
                 ))}
             </AnimatePresence>
-            <AddAccountCard
-              platform="instagram"
-              onClick={() => handleCreateAccount("instagram")}
-            />
+            {instagramAccounts.length < MAX_ACCOUNTS_PER_PLATFORM && (
+              <AddAccountCard
+                platform="instagram"
+                onClick={() => handleCreateAccount("instagram")}
+              />
+            )}
           </div>
 
           {/* Reddit Column */}
@@ -1434,10 +1466,12 @@ export function CardGrid() {
                   />
                 ))}
             </AnimatePresence>
-            <AddAccountCard
-              platform="reddit"
-              onClick={() => handleCreateAccount("reddit")}
-            />
+            {redditAccounts.length < MAX_ACCOUNTS_PER_PLATFORM && (
+              <AddAccountCard
+                platform="reddit"
+                onClick={() => handleCreateAccount("reddit")}
+              />
+            )}
           </div>
         </div>
       </div>
