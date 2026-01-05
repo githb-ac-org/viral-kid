@@ -339,22 +339,23 @@ export function YouTubeAccountModal({
 
           {/* Modal */}
           <motion.div
-            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto md:max-w-5xl rounded-2xl border"
+            className="relative z-10 flex w-full max-w-md flex-col rounded-2xl border md:max-w-5xl"
             style={{
               background:
                 "linear-gradient(to bottom, rgba(30,30,35,0.98) 0%, rgba(20,20,25,0.99) 100%)",
               borderColor: "rgba(255,255,255,0.1)",
               boxShadow:
                 "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.2)",
+              maxHeight: "85vh",
             }}
             initial={{ scale: 0.95, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 20, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            {/* Header */}
+            {/* Header - Fixed */}
             <div
-              className="flex items-center justify-between border-b border-white/10 px-6 py-4"
+              className="shrink-0 flex items-center justify-between border-b border-white/10 px-6 py-4"
               style={{
                 background:
                   "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(25,25,25,0.98) 100%)",
@@ -371,8 +372,8 @@ export function YouTubeAccountModal({
               />
             </div>
 
-            {/* Content */}
-            <div className="p-6">
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6" data-lenis-prevent>
               {/* Loading overlay */}
               <AnimatePresence>
                 {isLoading && (
@@ -448,7 +449,7 @@ export function YouTubeAccountModal({
                 {/* Three Column Layout */}
                 <div className="mb-6 flex flex-col gap-6 md:flex-row">
                   {/* Left Column - API Key */}
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <h3 className="mb-4 text-sm font-semibold tracking-wide text-white/90">
                       YouTube Data API
                     </h3>
@@ -535,7 +536,7 @@ export function YouTubeAccountModal({
                   />
 
                   {/* Middle Column - OpenRouter */}
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <h3 className="mb-4 text-sm font-semibold tracking-wide text-white/90">
                       OpenRouter API
                     </h3>
@@ -820,54 +821,54 @@ export function YouTubeAccountModal({
                     </motion.button>
                   </div>
                 </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 border-t border-white/10 pt-6">
-                  <ModalButton
-                    onClick={onClose}
-                    variant="secondary"
-                    className="flex-1"
-                  >
-                    Cancel
-                  </ModalButton>
-                  <ModalButton
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    variant="primary"
-                    className="flex-1"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Credentials"
-                    )}
-                  </ModalButton>
-                  <ModalButton
-                    onClick={handleConnect}
-                    disabled={
-                      isConnecting ||
-                      !credentials.clientId ||
-                      !credentials.clientSecret
-                    }
-                    variant="primary"
-                    className="flex-1"
-                  >
-                    {isConnecting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Connecting...
-                      </>
-                    ) : credentials.isConnected ? (
-                      "Reconnect"
-                    ) : (
-                      "Connect Account"
-                    )}
-                  </ModalButton>
-                </div>
               </div>
+            </div>
+
+            {/* Footer - Fixed */}
+            <div className="shrink-0 flex gap-3 border-t border-white/10 px-6 py-4">
+              <ModalButton
+                onClick={onClose}
+                variant="secondary"
+                className="flex-1"
+              >
+                Cancel
+              </ModalButton>
+              <ModalButton
+                onClick={handleSave}
+                disabled={isSaving}
+                variant="primary"
+                className="flex-1"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Credentials"
+                )}
+              </ModalButton>
+              <ModalButton
+                onClick={handleConnect}
+                disabled={
+                  isConnecting ||
+                  !credentials.clientId ||
+                  !credentials.clientSecret
+                }
+                variant="primary"
+                className="flex-1"
+              >
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : credentials.isConnected ? (
+                  "Reconnect"
+                ) : (
+                  "Connect Account"
+                )}
+              </ModalButton>
             </div>
           </motion.div>
 

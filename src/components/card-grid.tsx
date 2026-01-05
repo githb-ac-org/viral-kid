@@ -28,6 +28,7 @@ import { SettingsModal } from "./settings-modal";
 import { AccountModal } from "./account-modal";
 import { YouTubeAccountModal } from "./youtube-account-modal";
 import { InstagramAccountModal } from "./instagram-account-modal";
+import { InstagramAutomationsModal } from "./instagram-automations-modal";
 import { RedditAccountModal } from "./reddit-account-modal";
 
 // Custom Reddit icon since lucide-react doesn't have one
@@ -1034,6 +1035,11 @@ export function CardGrid() {
     accountId: string;
   }>({ isOpen: false, platform: "twitter", accountId: "" });
 
+  const [instagramAutomationsModal, setInstagramAutomationsModal] = useState<{
+    isOpen: boolean;
+    accountId: string;
+  }>({ isOpen: false, accountId: "" });
+
   const fetchAccounts = useCallback(async () => {
     try {
       const res = await fetch("/api/accounts");
@@ -1123,6 +1129,15 @@ export function CardGrid() {
   };
 
   const openSettings = (account: Account) => {
+    // For Instagram, open automations modal directly
+    if (account.platform === "instagram") {
+      setInstagramAutomationsModal({
+        isOpen: true,
+        accountId: account.id,
+      });
+      return;
+    }
+
     setSettingsModal({
       isOpen: true,
       platform: account.platform,
@@ -1541,6 +1556,15 @@ export function CardGrid() {
         onClose={closeDatabase}
         accountId={databaseModal.accountId}
         platform={databaseModal.platform}
+      />
+
+      <InstagramAutomationsModal
+        key={`instagram-automations-${instagramAutomationsModal.accountId}`}
+        isOpen={instagramAutomationsModal.isOpen}
+        onClose={() =>
+          setInstagramAutomationsModal((prev) => ({ ...prev, isOpen: false }))
+        }
+        accountId={instagramAutomationsModal.accountId}
       />
     </>
   );

@@ -11,6 +11,7 @@ interface IconButtonProps {
   onClick?: () => void;
   label: string;
   variant?: "default" | "danger";
+  className?: string;
 }
 
 export function IconButton({
@@ -18,12 +19,13 @@ export function IconButton({
   onClick,
   label,
   variant = "default",
+  className = "",
 }: IconButtonProps) {
   return (
     <motion.button
       type="button"
       onClick={onClick}
-      className="relative rounded-lg p-2"
+      className={`relative rounded-lg p-2 ${className}`}
       style={{
         color: "var(--text-secondary)",
         backgroundColor: "var(--bg-transparent)",

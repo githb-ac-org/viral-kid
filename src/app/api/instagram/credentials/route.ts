@@ -42,6 +42,7 @@ export async function GET(request: Request) {
       id: credentials.id,
       appId: credentials.appId,
       appSecret: credentials.appSecret ? "••••••••" : "",
+      webhookVerifyToken: credentials.webhookVerifyToken || "",
       instagramUsername: credentials.instagramUsername,
       facebookPageName: credentials.facebookPageName,
       isConnected: !!credentials.accessToken,
@@ -81,12 +82,14 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { appId, appSecret } = body;
+    const { appId, appSecret, webhookVerifyToken } = body;
 
     const updateData: Record<string, string> = {};
 
     if (appId !== undefined) updateData.appId = appId;
     if (appSecret && appSecret !== "••••••••") updateData.appSecret = appSecret;
+    if (webhookVerifyToken !== undefined)
+      updateData.webhookVerifyToken = webhookVerifyToken;
 
     const credentials = await db.instagramCredentials.update({
       where: { accountId },

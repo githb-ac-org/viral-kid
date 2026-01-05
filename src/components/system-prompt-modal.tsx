@@ -471,7 +471,7 @@ export function SystemPromptModal({
                 {/* Two Column Layout */}
                 <div className="flex flex-col gap-6 md:flex-row">
                   {/* Left Column - System Prompt */}
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <h3 className="mb-2 text-sm font-semibold tracking-wide text-white/90">
                       System Prompt
                     </h3>
@@ -552,7 +552,7 @@ You are a helpful social media assistant. Your role is to engage with users in a
                   />
 
                   {/* Right Column - Test */}
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <h3 className="mb-2 text-sm font-semibold tracking-wide text-white/90">
                       Test Response
                     </h3>

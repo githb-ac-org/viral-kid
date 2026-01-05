@@ -97,6 +97,8 @@ model Account {
   tweetInteractions     TweetInteraction[]
   youtubeCommentInteractions YouTubeCommentInteraction[]
   redditInteractions    RedditInteraction[]
+  instagramAutomations  InstagramAutomation[]
+  instagramInteractions InstagramInteraction[]
 
   @@index([platform])
   @@index([order])
@@ -196,6 +198,8 @@ model InstagramCredentials {
   // Meta App credentials (from Meta Developer Portal)
   appId       String   @default("")
   appSecret   String   @default("")
+  // Webhook verification token (user sets this, then uses same value in Meta Developer Portal)
+  webhookVerifyToken  String   @default("")
   // User OAuth tokens (obtained after user login via Facebook Login)
   accessToken       String?
   tokenExpiresAt    DateTime?
@@ -378,4 +382,62 @@ model RedditInteraction {
   @@index([createdAt])
   @@index([accountId, createdAt])
   @@index([subreddit])
+}
+
+// Instagram automation - per-post configuration for comment/DM automation
+model InstagramAutomation {
+  id               String   @id @default(cuid())
+  postId           String   // Instagram media ID
+  postUrl          String   @default("") // Permalink for display
+  postCaption      String   @default("") // Post caption snippet for UI
+  enabled          Boolean  @default(true)
+  keywords         String   @default("") // Comma-separated trigger keywords
+  commentTemplates String   @default("[]") // JSON array of reply templates
+  dmTemplates      String   @default("[]") // JSON array of DM templates
+  dmDelay          Int      @default(60) // Delay in seconds before sending DM
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relation to Account
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  // Relation to interactions
+  interactions InstagramInteraction[]
+
+  @@unique([accountId, postId])
+  @@index([accountId])
+  @@index([postId])
+}
+
+// Instagram comment interactions - tracks comments and our responses
+model InstagramInteraction {
+  id                String    @id @default(cuid())
+  commentId         String    // Instagram comment ID
+  commentText       String    // Original comment content
+  commenterUsername String    // Username who commented
+  commenterId       String    // Instagram user ID of commenter
+  keywordMatched    String    @default("") // Which keyword triggered this
+  ourReply          String?   // Our reply to the comment
+  ourReplyId        String?   // Our reply comment ID
+  repliedAt         DateTime? // When we replied
+  dmSent            Boolean   @default(false)
+  dmContent         String?   // DM content sent
+  dmSentAt          DateTime? // When DM was sent
+  dmError           String?   // Error if DM failed
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relation to Account
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  // Relation to automation
+  automationId String
+  automation   InstagramAutomation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, commentId])
+  @@index([accountId])
+  @@index([automationId])
+  @@index([createdAt])
 }

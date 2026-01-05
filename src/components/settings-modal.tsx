@@ -208,21 +208,22 @@ export function SettingsModal({
 
           {/* Modal */}
           <motion.div
-            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border"
+            className="relative z-10 flex w-full max-w-md flex-col rounded-2xl border"
             style={{
               background:
                 "linear-gradient(to bottom, rgba(30,30,35,0.98) 0%, rgba(20,20,25,0.99) 100%)",
               borderColor: "rgba(255,255,255,0.1)",
               boxShadow:
                 "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.2)",
+              maxHeight: "85vh",
             }}
             initial={{ scale: 0.95, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 20, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+            {/* Header - Fixed */}
+            <div className="shrink-0 flex items-center justify-between border-b border-white/10 px-6 py-4">
               <h2 className="text-sm font-semibold tracking-wide text-white/90">
                 {platformTitle} Settings
               </h2>
@@ -233,8 +234,8 @@ export function SettingsModal({
               />
             </div>
 
-            {/* Content */}
-            <div className="p-6">
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6" data-lenis-prevent>
               {/* Loading overlay */}
               <AnimatePresence>
                 {isLoading && (
@@ -490,114 +491,116 @@ export function SettingsModal({
                   </div>
                 )}
 
-                {/* Schedule Dropdown */}
-                <div className="mb-6">
-                  <label className="mb-2 block text-sm font-semibold tracking-wide text-white/90">
-                    Schedule
-                  </label>
-                  <div className="relative" ref={dropdownRef}>
-                    <motion.button
-                      type="button"
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className="flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left backdrop-blur-xl"
-                      style={{
-                        background: "rgba(255,255,255,0.05)",
-                        borderColor: isDropdownOpen
-                          ? "rgba(255,255,255,0.3)"
-                          : "rgba(255,255,255,0.1)",
-                      }}
-                      whileHover={{ borderColor: "rgba(255,255,255,0.2)" }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <span className="text-white/90">
-                        {selectedScheduleLabel}
-                      </span>
-                      <motion.div
-                        animate={{ rotate: isDropdownOpen ? 180 : 0 }}
-                        transition={{ duration: 0.2 }}
+                {/* Schedule Dropdown - Not for Instagram (uses webhooks) */}
+                {platform !== "instagram" && (
+                  <div className="mb-6">
+                    <label className="mb-2 block text-sm font-semibold tracking-wide text-white/90">
+                      Schedule
+                    </label>
+                    <div className="relative" ref={dropdownRef}>
+                      <motion.button
+                        type="button"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className="flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left backdrop-blur-xl"
+                        style={{
+                          background: "rgba(255,255,255,0.05)",
+                          borderColor: isDropdownOpen
+                            ? "rgba(255,255,255,0.3)"
+                            : "rgba(255,255,255,0.1)",
+                        }}
+                        whileHover={{ borderColor: "rgba(255,255,255,0.2)" }}
+                        transition={{ duration: 0.15 }}
                       >
-                        <ChevronDown className="h-5 w-5 text-white/50" />
-                      </motion.div>
-                    </motion.button>
-
-                    <AnimatePresence>
-                      {isDropdownOpen && (
+                        <span className="text-white/90">
+                          {selectedScheduleLabel}
+                        </span>
                         <motion.div
-                          variants={dropdownVariants}
-                          initial="hidden"
-                          animate="visible"
-                          exit="exit"
-                          className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border backdrop-blur-xl"
-                          style={{
-                            background:
-                              "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
-                            borderColor: "rgba(255,255,255,0.15)",
-                            boxShadow:
-                              "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)",
-                          }}
+                          animate={{ rotate: isDropdownOpen ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
                         >
-                          {SCHEDULE_OPTIONS.map((option, index) => (
-                            <motion.button
-                              key={option.value}
-                              type="button"
-                              onClick={() => {
-                                setSchedule(option.value);
-                                setIsDropdownOpen(false);
-                              }}
-                              className="w-full px-4 py-3 text-left"
-                              style={{
-                                color:
-                                  schedule === option.value
-                                    ? "rgba(255,255,255,1)"
-                                    : "rgba(255,255,255,0.5)",
-                                backgroundColor:
-                                  schedule === option.value
-                                    ? "rgba(255,255,255,0.1)"
-                                    : "rgba(0,0,0,0)",
-                              }}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: index * 0.02 }}
-                              whileHover={{
-                                backgroundColor: "rgba(255,255,255,0.08)",
-                                color: "rgba(255,255,255,1)",
-                              }}
-                            >
-                              {option.label}
-                            </motion.button>
-                          ))}
+                          <ChevronDown className="h-5 w-5 text-white/50" />
                         </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </div>
+                      </motion.button>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3 border-t border-white/10 pt-6">
-                  <ModalButton
-                    onClick={onClose}
-                    variant="secondary"
-                    className="flex-1"
-                  >
-                    Cancel
-                  </ModalButton>
-                  <ModalButton
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    variant="primary"
-                    className="flex-1"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save"
-                    )}
-                  </ModalButton>
-                </div>
+                      <AnimatePresence>
+                        {isDropdownOpen && (
+                          <motion.div
+                            variants={dropdownVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border backdrop-blur-xl"
+                            style={{
+                              background:
+                                "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
+                              borderColor: "rgba(255,255,255,0.15)",
+                              boxShadow:
+                                "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)",
+                            }}
+                          >
+                            {SCHEDULE_OPTIONS.map((option, index) => (
+                              <motion.button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                  setSchedule(option.value);
+                                  setIsDropdownOpen(false);
+                                }}
+                                className="w-full px-4 py-3 text-left"
+                                style={{
+                                  color:
+                                    schedule === option.value
+                                      ? "rgba(255,255,255,1)"
+                                      : "rgba(255,255,255,0.5)",
+                                  backgroundColor:
+                                    schedule === option.value
+                                      ? "rgba(255,255,255,0.1)"
+                                      : "rgba(0,0,0,0)",
+                                }}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.02 }}
+                                whileHover={{
+                                  backgroundColor: "rgba(255,255,255,0.08)",
+                                  color: "rgba(255,255,255,1)",
+                                }}
+                              >
+                                {option.label}
+                              </motion.button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                )}
               </div>
+            </div>
+
+            {/* Footer - Fixed */}
+            <div className="shrink-0 flex gap-3 border-t border-white/10 px-6 py-4">
+              <ModalButton
+                onClick={onClose}
+                variant="secondary"
+                className="flex-1"
+              >
+                Cancel
+              </ModalButton>
+              <ModalButton
+                onClick={handleSave}
+                disabled={isSaving}
+                variant="primary"
+                className="flex-1"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </ModalButton>
             </div>
           </motion.div>
         </div>

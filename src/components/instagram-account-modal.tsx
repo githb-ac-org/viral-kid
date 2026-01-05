@@ -1,23 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import {
-  X,
-  Loader2,
-  Copy,
-  Check,
-  ExternalLink,
-  RefreshCw,
-  ChevronDown,
-  Search,
-  FileText,
-} from "lucide-react";
-import { SystemPromptModal } from "./system-prompt-modal";
+import { X, Loader2, Copy, Check, ExternalLink } from "lucide-react";
 import {
   backdropVariants,
-  dropdownVariants,
   fadeInVariants,
   connectionStatusVariants,
 } from "@/lib/animations";
@@ -34,37 +22,10 @@ interface InstagramAccountModalProps {
 interface InstagramCredentialsState {
   appId: string;
   appSecret: string;
+  webhookVerifyToken: string;
   instagramUsername?: string;
   facebookPageName?: string;
   isConnected: boolean;
-}
-
-interface OpenRouterModel {
-  id: string;
-  name: string;
-  description?: string;
-  contextLength: number;
-  pricing?: string | null;
-}
-
-function formatModelPrice(pricing?: string | null): string {
-  if (!pricing) return "Free";
-  try {
-    const parsed = JSON.parse(pricing);
-    const promptPrice = parseFloat(parsed.prompt || "0");
-    if (promptPrice === 0) return "Free";
-    // Convert to price per 1M tokens
-    const pricePerMillion = promptPrice * 1_000_000;
-    if (pricePerMillion < 0.01) return "<$0.01/1M";
-    return `$${pricePerMillion.toFixed(2)}/1M`;
-  } catch {
-    return "Free";
-  }
-}
-
-function formatModelName(name: string): string {
-  // Remove provider prefix like "Anthropic: ", "OpenAI: ", "Google: ", etc.
-  return name.replace(/^[^:]+:\s*/, "");
 }
 
 export function InstagramAccountModal({
@@ -75,6 +36,7 @@ export function InstagramAccountModal({
   const [credentials, setCredentials] = useState<InstagramCredentialsState>({
     appId: "",
     appSecret: "",
+    webhookVerifyToken: "",
     isConnected: false,
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -82,46 +44,16 @@ export function InstagramAccountModal({
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [callbackUrl, setCallbackUrl] = useState("");
-
-  // OpenRouter state
-  const [openRouterApiKey, setOpenRouterApiKey] = useState("");
-  const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>(
-    []
-  );
-  const [isSyncingModels, setIsSyncingModels] = useState(false);
-  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
-  const [modelSearchQuery, setModelSearchQuery] = useState("");
-  const [selectedModel, setSelectedModel] = useState<OpenRouterModel | null>(
-    null
-  );
-  const [isSystemPromptModalOpen, setIsSystemPromptModalOpen] = useState(false);
-
-  // Ref for click-outside handling
-  const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const [webhookUrl, setWebhookUrl] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setCallbackUrl(`${window.location.origin}/api/instagram/callback`);
+      setWebhookUrl(`${window.location.origin}/api/instagram/webhook`);
     }
   }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!isModelDropdownOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        modelDropdownRef.current &&
-        !modelDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsModelDropdownOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isModelDropdownOpen]);
 
   useEffect(() => {
     if (isOpen && accountId) {
@@ -136,6 +68,7 @@ export function InstagramAccountModal({
             setCredentials({
               appId: data.appId || "",
               appSecret: data.appSecret || "",
+              webhookVerifyToken: data.webhookVerifyToken || "",
               instagramUsername: data.instagramUsername,
               facebookPageName: data.facebookPageName,
               isConnected: !!data.isConnected,
@@ -148,69 +81,6 @@ export function InstagramAccountModal({
         .finally(() => setIsLoading(false));
     }
   }, [isOpen, accountId]);
-
-  // Fetch OpenRouter credentials and models
-  useEffect(() => {
-    if (isOpen && accountId) {
-      // First fetch models, then credentials (so we can match selectedModel)
-      fetch("/api/openrouter/models")
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch");
-          return res.json();
-        })
-        .then((models) => {
-          if (!Array.isArray(models)) return;
-          setOpenRouterModels(models);
-          // Now fetch credentials and match the selected model
-          fetch(`/api/openrouter/credentials?accountId=${accountId}`)
-            .then((res) => {
-              if (!res.ok) throw new Error("Failed to fetch");
-              return res.json();
-            })
-            .then((data) => {
-              if (data.hasApiKey) {
-                setOpenRouterApiKey(data.apiKey);
-              }
-              // Set the selected model from saved credentials
-              if (data.selectedModel) {
-                const savedModel = models.find(
-                  (m: OpenRouterModel) => m.id === data.selectedModel
-                );
-                if (savedModel) {
-                  setSelectedModel(savedModel);
-                }
-              }
-            });
-        })
-        .catch((err) => {
-          console.error("Failed to fetch OpenRouter data:", err);
-        });
-    }
-  }, [isOpen, accountId]);
-
-  const handleSyncModels = async (apiKey?: string) => {
-    const keyToUse = apiKey || openRouterApiKey;
-    if (!keyToUse) return;
-
-    setIsSyncingModels(true);
-    try {
-      const res = await fetch("/api/openrouter/models", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: keyToUse }),
-      });
-
-      const data = await res.json();
-      if (data.models) {
-        setOpenRouterModels(data.models);
-        toast.success("Models synced");
-      }
-    } catch {
-      toast.error("Failed to sync models");
-    } finally {
-      setIsSyncingModels(false);
-    }
-  };
 
   const handleSave = async () => {
     if (!accountId) return;
@@ -225,29 +95,13 @@ export function InstagramAccountModal({
           body: JSON.stringify({
             appId: credentials.appId,
             appSecret: credentials.appSecret,
+            webhookVerifyToken: credentials.webhookVerifyToken,
           }),
         }
       );
 
       if (!res.ok) {
         throw new Error("Failed to save credentials");
-      }
-
-      // Only save/sync if a new API key was entered (not the masked placeholder)
-      const isNewApiKey = openRouterApiKey && !openRouterApiKey.includes("•");
-      if (isNewApiKey) {
-        const openRouterRes = await fetch(
-          `/api/openrouter/credentials?accountId=${accountId}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ apiKey: openRouterApiKey }),
-          }
-        );
-
-        if (openRouterRes.ok) {
-          await handleSyncModels(openRouterApiKey);
-        }
       }
 
       toast.success("Credentials saved");
@@ -316,10 +170,23 @@ export function InstagramAccountModal({
     }
   };
 
-  const updateCredential = (key: "appId" | "appSecret") => {
+  const updateCredential = (
+    key: "appId" | "appSecret" | "webhookVerifyToken"
+  ) => {
     return (value: string) => {
       setCredentials((prev) => ({ ...prev, [key]: value }));
     };
+  };
+
+  const handleCopyWebhook = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopiedWebhook(true);
+      setTimeout(() => setCopiedWebhook(false), 2000);
+      toast.success("Copied");
+    } catch {
+      toast.error("Failed to copy");
+    }
   };
 
   return (
@@ -338,22 +205,23 @@ export function InstagramAccountModal({
 
           {/* Modal */}
           <motion.div
-            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto md:max-w-4xl rounded-2xl border"
+            className="relative z-10 flex w-full max-w-md flex-col rounded-2xl border md:max-w-4xl"
             style={{
               background:
                 "linear-gradient(to bottom, rgba(30,30,35,0.98) 0%, rgba(20,20,25,0.99) 100%)",
               borderColor: "rgba(255,255,255,0.1)",
               boxShadow:
                 "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.2)",
+              maxHeight: "85vh",
             }}
             initial={{ scale: 0.95, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 20, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            {/* Header */}
+            {/* Header - Fixed */}
             <div
-              className="flex items-center justify-between border-b border-white/10 px-6 py-4"
+              className="shrink-0 flex items-center justify-between border-b border-white/10 px-6 py-4"
               style={{
                 background:
                   "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(25,25,25,0.98) 100%)",
@@ -370,8 +238,8 @@ export function InstagramAccountModal({
               />
             </div>
 
-            {/* Content */}
-            <div className="p-6">
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6" data-lenis-prevent>
               {/* Loading overlay */}
               <AnimatePresence>
                 {isLoading && (
@@ -462,9 +330,9 @@ export function InstagramAccountModal({
                 </div>
 
                 {/* Two Column Layout */}
-                <div className="mb-6 flex flex-col gap-6 md:flex-row">
+                <div className="flex flex-col gap-6 md:flex-row">
                   {/* Left Column - Meta App Credentials */}
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <h3 className="mb-4 text-sm font-semibold tracking-wide text-white/90">
                       Meta App Credentials
                     </h3>
@@ -543,350 +411,107 @@ export function InstagramAccountModal({
                     style={{ background: "rgba(255,255,255,0.1)" }}
                   />
 
-                  {/* Right Column - OpenRouter */}
-                  <div className="flex-1">
+                  {/* Right Column - Webhook Configuration */}
+                  <div className="min-w-0 flex-1">
                     <h3 className="mb-4 text-sm font-semibold tracking-wide text-white/90">
-                      OpenRouter API
+                      Webhook Configuration
                     </h3>
                     <p className="mb-4 text-xs text-white/50">
-                      Connect to OpenRouter for LLM access.
+                      Add these to your Meta App → Webhooks → Instagram settings
                     </p>
 
-                    <CredentialInput
-                      id="openRouterApiKey"
-                      label="API Key"
-                      value={openRouterApiKey}
-                      onChange={setOpenRouterApiKey}
-                      placeholder="Enter OpenRouter API Key..."
-                      type="password"
-                    />
-
-                    {/* LLM Models Section */}
-                    <div className="mt-4">
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-sm font-semibold tracking-wide text-white/90">
-                          LLM Models
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {openRouterModels.length > 0 && (
-                            <span
-                              className="rounded-full px-2 py-0.5 text-xs font-medium text-white/70"
-                              style={{ background: "rgba(255,255,255,0.1)" }}
-                            >
-                              {openRouterModels.length}
-                            </span>
-                          )}
-                          <motion.button
-                            type="button"
-                            onClick={() => handleSyncModels()}
-                            disabled={isSyncingModels || !openRouterApiKey}
-                            className="rounded-lg p-1.5"
-                            style={{
-                              color:
-                                isSyncingModels || !openRouterApiKey
-                                  ? "rgba(255,255,255,0.3)"
-                                  : "rgba(255,255,255,0.5)",
-                              background: "rgba(255,255,255,0.05)",
-                              cursor:
-                                isSyncingModels || !openRouterApiKey
-                                  ? "not-allowed"
-                                  : "pointer",
-                            }}
-                            whileHover={
-                              isSyncingModels || !openRouterApiKey
-                                ? {}
-                                : { backgroundColor: "rgba(255,255,255,0.1)" }
-                            }
-                            whileTap={
-                              isSyncingModels || !openRouterApiKey
-                                ? {}
-                                : { scale: 0.95 }
-                            }
-                            transition={{ duration: 0.15 }}
-                            title="Sync models"
-                          >
-                            <RefreshCw
-                              className={`h-3.5 w-3.5 ${isSyncingModels ? "animate-spin" : ""}`}
-                            />
-                          </motion.button>
-                        </div>
-                      </div>
-
-                      {/* Searchable Dropdown */}
-                      <div className="relative" ref={modelDropdownRef}>
-                        <motion.button
-                          type="button"
-                          onClick={() =>
-                            setIsModelDropdownOpen(!isModelDropdownOpen)
-                          }
-                          disabled={openRouterModels.length === 0}
-                          className="flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-left"
+                    {/* Webhook URL */}
+                    <div className="mb-4">
+                      <label className="mb-2 block text-sm font-semibold tracking-wide text-white/70">
+                        Callback URL
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="flex-1 overflow-hidden rounded-lg border px-4 py-3"
                           style={{
-                            background: "rgba(255,255,255,0.05)",
-                            borderColor: isModelDropdownOpen
-                              ? "rgba(255,255,255,0.3)"
-                              : "rgba(255,255,255,0.1)",
-                            cursor:
-                              openRouterModels.length === 0
-                                ? "not-allowed"
-                                : "pointer",
+                            background: "rgba(255,255,255,0.03)",
+                            borderColor: "rgba(255,255,255,0.1)",
                           }}
-                          whileHover={
-                            openRouterModels.length === 0
-                              ? {}
-                              : { borderColor: "rgba(255,255,255,0.2)" }
-                          }
-                          transition={{ duration: 0.15 }}
                         >
-                          <span
-                            className="truncate text-sm"
-                            style={{
-                              color: selectedModel
-                                ? "rgba(255,255,255,0.9)"
-                                : "rgba(255,255,255,0.4)",
-                            }}
-                          >
-                            {selectedModel
-                              ? formatModelName(selectedModel.name)
-                              : openRouterModels.length === 0
-                                ? "Sync models first..."
-                                : "Select a model..."}
-                          </span>
-                          <motion.div
-                            animate={{ rotate: isModelDropdownOpen ? 180 : 0 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <ChevronDown className="h-4 w-4 shrink-0 text-white/50" />
-                          </motion.div>
-                        </motion.button>
-
-                        <AnimatePresence>
-                          {isModelDropdownOpen &&
-                            openRouterModels.length > 0 && (
-                              <motion.div
-                                variants={dropdownVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                                className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-lg border"
-                                style={{
-                                  background:
-                                    "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
-                                  borderColor: "rgba(255,255,255,0.15)",
-                                  boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-                                }}
-                              >
-                                {/* Search Input */}
-                                <div
-                                  className="border-b p-2"
-                                  style={{
-                                    borderColor: "rgba(255,255,255,0.1)",
-                                  }}
-                                >
-                                  <div className="relative">
-                                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
-                                    <input
-                                      type="text"
-                                      value={modelSearchQuery}
-                                      onChange={(e) =>
-                                        setModelSearchQuery(e.target.value)
-                                      }
-                                      placeholder="Search models..."
-                                      className="w-full rounded border bg-transparent py-1.5 pr-3 pl-8 text-sm text-white/90 outline-none"
-                                      style={{
-                                        borderColor: "rgba(255,255,255,0.1)",
-                                      }}
-                                      autoFocus
-                                    />
-                                  </div>
-                                </div>
-
-                                {/* Model List */}
-                                <div
-                                  className="max-h-48 overflow-y-auto"
-                                  data-lenis-prevent
-                                >
-                                  {openRouterModels
-                                    .filter(
-                                      (model) =>
-                                        model.name
-                                          .toLowerCase()
-                                          .includes(
-                                            modelSearchQuery.toLowerCase()
-                                          ) ||
-                                        model.id
-                                          .toLowerCase()
-                                          .includes(
-                                            modelSearchQuery.toLowerCase()
-                                          )
-                                    )
-                                    .slice(0, 100)
-                                    .map((model, index) => (
-                                      <motion.button
-                                        key={model.id}
-                                        type="button"
-                                        onClick={async () => {
-                                          setSelectedModel(model);
-                                          setIsModelDropdownOpen(false);
-                                          setModelSearchQuery("");
-                                          // Save the selected model immediately
-                                          try {
-                                            await fetch(
-                                              `/api/openrouter/credentials?accountId=${accountId}`,
-                                              {
-                                                method: "POST",
-                                                headers: {
-                                                  "Content-Type":
-                                                    "application/json",
-                                                },
-                                                body: JSON.stringify({
-                                                  selectedModel: model.id,
-                                                }),
-                                              }
-                                            );
-                                          } catch (err) {
-                                            console.error(
-                                              "Failed to save model selection:",
-                                              err
-                                            );
-                                          }
-                                        }}
-                                        className="w-full px-3 py-2.5 text-left text-sm"
-                                        style={{
-                                          color:
-                                            selectedModel?.id === model.id
-                                              ? "rgba(255,255,255,1)"
-                                              : "rgba(255,255,255,0.7)",
-                                          backgroundColor:
-                                            selectedModel?.id === model.id
-                                              ? "rgba(255,255,255,0.1)"
-                                              : "rgba(0,0,0,0)",
-                                        }}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.01 }}
-                                        whileHover={{
-                                          backgroundColor:
-                                            "rgba(255,255,255,0.08)",
-                                          color: "rgba(255,255,255,0.9)",
-                                        }}
-                                      >
-                                        <div className="truncate">
-                                          {formatModelName(model.name)}
-                                        </div>
-                                        <div
-                                          className="truncate text-xs"
-                                          style={{
-                                            color: "rgba(255,255,255,0.4)",
-                                          }}
-                                        >
-                                          {formatModelPrice(model.pricing)}
-                                        </div>
-                                      </motion.button>
-                                    ))}
-                                  {openRouterModels.filter(
-                                    (model) =>
-                                      model.name
-                                        .toLowerCase()
-                                        .includes(
-                                          modelSearchQuery.toLowerCase()
-                                        ) ||
-                                      model.id
-                                        .toLowerCase()
-                                        .includes(
-                                          modelSearchQuery.toLowerCase()
-                                        )
-                                  ).length === 0 && (
-                                    <p className="px-3 py-4 text-center text-xs text-white/40">
-                                      No models found
-                                    </p>
-                                  )}
-                                </div>
-                              </motion.div>
-                            )}
-                        </AnimatePresence>
+                          <code className="block truncate text-sm text-white/70">
+                            {webhookUrl}
+                          </code>
+                        </div>
+                        <IconButton
+                          icon={
+                            copiedWebhook ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )
+                          }
+                          onClick={handleCopyWebhook}
+                          label="Copy webhook URL"
+                        />
                       </div>
                     </div>
 
-                    {/* System Prompt Button */}
-                    <motion.button
-                      type="button"
-                      onClick={() => setIsSystemPromptModalOpen(true)}
-                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium"
-                      style={{
-                        borderColor: "rgba(255,255,255,0.1)",
-                        color: "rgba(255,255,255,0.7)",
-                      }}
-                      whileHover={{
-                        backgroundColor: "rgba(255,255,255,0.1)",
-                        borderColor: "rgba(255,255,255,0.2)",
-                      }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <FileText className="h-4 w-4" />
-                      System Prompt
-                    </motion.button>
+                    <CredentialInput
+                      id="webhookVerifyToken"
+                      label="Verify Token"
+                      value={credentials.webhookVerifyToken}
+                      onChange={updateCredential("webhookVerifyToken")}
+                      placeholder="Enter any secret token..."
+                    />
+                    <p className="mt-1 text-xs text-white/40">
+                      Use the same token when configuring the webhook in Meta
+                      Developer Portal
+                    </p>
                   </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 border-t border-white/10 pt-6">
-                  <ModalButton
-                    onClick={onClose}
-                    variant="secondary"
-                    className="flex-1"
-                  >
-                    Cancel
-                  </ModalButton>
-                  <ModalButton
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    variant="primary"
-                    className="flex-1"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Credentials"
-                    )}
-                  </ModalButton>
-                  <ModalButton
-                    onClick={handleConnect}
-                    disabled={
-                      isConnecting ||
-                      !credentials.appId ||
-                      !credentials.appSecret
-                    }
-                    variant="primary"
-                    className="flex-1"
-                  >
-                    {isConnecting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Connecting...
-                      </>
-                    ) : credentials.isConnected ? (
-                      "Reconnect"
-                    ) : (
-                      "Connect Account"
-                    )}
-                  </ModalButton>
                 </div>
               </div>
             </div>
-          </motion.div>
 
-          {/* System Prompt Modal */}
-          <SystemPromptModal
-            isOpen={isSystemPromptModalOpen}
-            onClose={() => setIsSystemPromptModalOpen(false)}
-            accountId={accountId}
-            platform="instagram"
-          />
+            {/* Footer - Fixed */}
+            <div className="shrink-0 flex gap-3 border-t border-white/10 px-6 py-4">
+              <ModalButton
+                onClick={onClose}
+                variant="secondary"
+                className="flex-1"
+              >
+                Cancel
+              </ModalButton>
+              <ModalButton
+                onClick={handleSave}
+                disabled={isSaving}
+                variant="primary"
+                className="flex-1"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </ModalButton>
+              <ModalButton
+                onClick={handleConnect}
+                disabled={
+                  isConnecting || !credentials.appId || !credentials.appSecret
+                }
+                variant="primary"
+                className="flex-1"
+              >
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : credentials.isConnected ? (
+                  "Reconnect"
+                ) : (
+                  "Connect"
+                )}
+              </ModalButton>
+            </div>
+          </motion.div>
         </div>
       )}
     </AnimatePresence>

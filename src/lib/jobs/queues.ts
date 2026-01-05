@@ -7,6 +7,8 @@ import {
   type FetchYouTubeTrendsData,
   type AnalyzeViralContentData,
   type CleanupOldDataData,
+  type InstagramProcessCommentData,
+  type InstagramSendDmData,
 } from "./types";
 
 const QUEUE_NAME = "viral-kid-jobs";
@@ -74,6 +76,20 @@ export async function scheduleCleanupOldData(
   options?: JobsOptions
 ): Promise<string> {
   return addJob(JobNames.CLEANUP_OLD_DATA, data, options);
+}
+
+export async function scheduleInstagramProcessComment(
+  data: InstagramProcessCommentData,
+  options?: JobsOptions
+): Promise<string> {
+  return addJob(JobNames.INSTAGRAM_PROCESS_COMMENT, data, options);
+}
+
+export async function scheduleInstagramSendDm(
+  data: InstagramSendDmData,
+  options?: JobsOptions
+): Promise<string> {
+  return addJob(JobNames.INSTAGRAM_SEND_DM, data, options);
 }
 
 // Schedule repeatable/cron jobs
