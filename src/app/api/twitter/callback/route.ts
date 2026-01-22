@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { TwitterApi } from "twitter-api-v2";
 import { db } from "@/lib/db";
 import { cookies } from "next/headers";
+import { getBaseUrl } from "@/lib/utils";
 
 // Timing-safe state comparison to prevent timing attacks
 function isValidState(
@@ -18,6 +19,8 @@ function isValidState(
 }
 
 export async function GET(request: Request) {
+  const baseUrl = getBaseUrl(request);
+
   try {
     const url = new URL(request.url);
     const code = url.searchParams.get("code");
@@ -26,12 +29,12 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error("Twitter OAuth error:", error);
-      return NextResponse.redirect(new URL("/?error=oauth_denied", url.origin));
+      return NextResponse.redirect(new URL("/?error=oauth_denied", baseUrl));
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        new URL("/?error=missing_params", url.origin)
+        new URL("/?error=missing_params", baseUrl)
       );
     }
 
@@ -42,19 +45,19 @@ export async function GET(request: Request) {
 
     if (!codeVerifier) {
       return NextResponse.redirect(
-        new URL("/?error=missing_verifier", url.origin)
+        new URL("/?error=missing_verifier", baseUrl)
       );
     }
 
     if (!isValidState(state, storedState)) {
       return NextResponse.redirect(
-        new URL("/?error=state_mismatch", url.origin)
+        new URL("/?error=state_mismatch", baseUrl)
       );
     }
 
     if (!accountId) {
       return NextResponse.redirect(
-        new URL("/?error=missing_account", url.origin)
+        new URL("/?error=missing_account", baseUrl)
       );
     }
 
@@ -64,7 +67,7 @@ export async function GET(request: Request) {
 
     if (!credentials?.clientId || !credentials?.clientSecret) {
       return NextResponse.redirect(
-        new URL("/?error=no_credentials", url.origin)
+        new URL("/?error=no_credentials", baseUrl)
       );
     }
 
@@ -73,7 +76,7 @@ export async function GET(request: Request) {
       clientSecret: credentials.clientSecret,
     });
 
-    const callbackUrl = `${url.origin}/api/twitter/callback`;
+    const callbackUrl = `${baseUrl}/api/twitter/callback`;
 
     const {
       accessToken,
@@ -106,7 +109,7 @@ export async function GET(request: Request) {
 
     // Clear the OAuth cookies
     const response = NextResponse.redirect(
-      new URL("/?success=twitter_connected", url.origin)
+      new URL("/?success=twitter_connected", baseUrl)
     );
 
     response.cookies.delete("twitter_code_verifier");
@@ -116,7 +119,6 @@ export async function GET(request: Request) {
     return response;
   } catch (error) {
     console.error("Twitter OAuth callback error:", error);
-    const url = new URL(request.url);
-    return NextResponse.redirect(new URL("/?error=oauth_failed", url.origin));
+    return NextResponse.redirect(new URL("/?error=oauth_failed", baseUrl));
   }
 }

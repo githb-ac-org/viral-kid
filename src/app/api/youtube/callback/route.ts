@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { cookies } from "next/headers";
+import { getBaseUrl } from "@/lib/utils";
 
 // Timing-safe state comparison to prevent timing attacks
 function isValidState(
@@ -22,6 +23,8 @@ const YOUTUBE_CHANNELS_URL =
   "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true";
 
 export async function GET(request: Request) {
+  const baseUrl = getBaseUrl(request);
+
   try {
     const url = new URL(request.url);
     const code = url.searchParams.get("code");
@@ -31,13 +34,13 @@ export async function GET(request: Request) {
     if (error) {
       console.error("YouTube OAuth error:", error);
       return NextResponse.redirect(
-        new URL("/?error=youtube_oauth_denied", url.origin)
+        new URL("/?error=youtube_oauth_denied", baseUrl)
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        new URL("/?error=youtube_missing_params", url.origin)
+        new URL("/?error=youtube_missing_params", baseUrl)
       );
     }
 
@@ -47,13 +50,13 @@ export async function GET(request: Request) {
 
     if (!isValidState(state, storedState)) {
       return NextResponse.redirect(
-        new URL("/?error=youtube_state_mismatch", url.origin)
+        new URL("/?error=youtube_state_mismatch", baseUrl)
       );
     }
 
     if (!accountId) {
       return NextResponse.redirect(
-        new URL("/?error=youtube_missing_account", url.origin)
+        new URL("/?error=youtube_missing_account", baseUrl)
       );
     }
 
@@ -63,11 +66,11 @@ export async function GET(request: Request) {
 
     if (!credentials?.clientId || !credentials?.clientSecret) {
       return NextResponse.redirect(
-        new URL("/?error=youtube_no_credentials", url.origin)
+        new URL("/?error=youtube_no_credentials", baseUrl)
       );
     }
 
-    const callbackUrl = `${url.origin}/api/youtube/callback`;
+    const callbackUrl = `${baseUrl}/api/youtube/callback`;
 
     // Exchange code for tokens
     const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
@@ -88,7 +91,7 @@ export async function GET(request: Request) {
       const errorData = await tokenResponse.text();
       console.error("Token exchange failed:", errorData);
       return NextResponse.redirect(
-        new URL("/?error=youtube_token_exchange_failed", url.origin)
+        new URL("/?error=youtube_token_exchange_failed", baseUrl)
       );
     }
 
@@ -105,7 +108,7 @@ export async function GET(request: Request) {
     if (!channelResponse.ok) {
       console.error("Failed to fetch channel info");
       return NextResponse.redirect(
-        new URL("/?error=youtube_channel_fetch_failed", url.origin)
+        new URL("/?error=youtube_channel_fetch_failed", baseUrl)
       );
     }
 
@@ -114,7 +117,7 @@ export async function GET(request: Request) {
 
     if (!channel) {
       return NextResponse.redirect(
-        new URL("/?error=youtube_no_channel", url.origin)
+        new URL("/?error=youtube_no_channel", baseUrl)
       );
     }
 
@@ -135,7 +138,7 @@ export async function GET(request: Request) {
 
     // Clear the OAuth cookies
     const response = NextResponse.redirect(
-      new URL("/?success=youtube_connected", url.origin)
+      new URL("/?success=youtube_connected", baseUrl)
     );
 
     response.cookies.delete("youtube_oauth_state");
@@ -144,9 +147,8 @@ export async function GET(request: Request) {
     return response;
   } catch (error) {
     console.error("YouTube OAuth callback error:", error);
-    const url = new URL(request.url);
     return NextResponse.redirect(
-      new URL("/?error=youtube_oauth_failed", url.origin)
+      new URL("/?error=youtube_oauth_failed", baseUrl)
     );
   }
 }
