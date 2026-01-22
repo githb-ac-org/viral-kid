@@ -1,8 +1,6 @@
 #!/bin/sh
 set -e
 
-echo "MODE is: $MODE"
-
 if [ "$MODE" = "worker" ]; then
   echo "Starting BullMQ worker..."
   exec npx tsx src/lib/jobs/worker.ts
