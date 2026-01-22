@@ -543,6 +543,105 @@ function AddAccountCard({ platform, onClick }: AddAccountCardProps) {
   );
 }
 
+function ComingSoonCard({ platform }: { platform: Platform }) {
+  const icon =
+    platform === "instagram" ? (
+      <Instagram className="h-12 w-12" />
+    ) : platform === "twitter" ? (
+      <Twitter className="h-12 w-12" />
+    ) : platform === "youtube" ? (
+      <Youtube className="h-12 w-12" />
+    ) : (
+      <RedditIcon className="h-12 w-12" />
+    );
+
+  const iconColor =
+    platform === "instagram"
+      ? "text-pink-500/30"
+      : platform === "twitter"
+        ? "text-sky-400/30"
+        : platform === "youtube"
+          ? "text-red-500/30"
+          : "text-orange-500/30";
+
+  const label = platformConfig[platform].label;
+
+  return (
+    <motion.div
+      className="group relative flex w-72 cursor-not-allowed flex-col overflow-hidden rounded-2xl border"
+      style={{
+        borderColor: "rgba(255,255,255,0.08)",
+        boxShadow:
+          "0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.1)",
+        opacity: 0.6,
+      }}
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      {/* Glass background - static layer */}
+      <div
+        className="absolute inset-0 backdrop-blur-xl"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)",
+        }}
+      />
+
+      {/* Label with Coming Soon badge */}
+      <div className="relative z-10 flex items-center justify-between px-5 pt-4">
+        <h3 className="text-sm font-semibold capitalize tracking-wide text-white/50">
+          {label}
+        </h3>
+        <motion.span
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="rounded-full bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-400"
+        >
+          Coming Soon
+        </motion.span>
+      </div>
+
+      {/* Icon */}
+      <div className="relative z-10 flex flex-1 items-center justify-center py-8">
+        <div className={iconColor}>{icon}</div>
+      </div>
+
+      {/* Placeholder for action area */}
+      <div className="relative z-10 flex items-center justify-center border-t border-white/5 px-4 py-4">
+        <span className="text-xs text-white/30">Feature in development</span>
+      </div>
+    </motion.div>
+  );
+}
+
+function MobileComingSoonCard({ platform }: { platform: Platform }) {
+  const config = platformConfig[platform];
+
+  return (
+    <div
+      className="relative cursor-not-allowed rounded-xl border border-white/5 bg-white/[0.02]"
+      style={{ opacity: 0.6 }}
+    >
+      <div className="flex items-center justify-between px-3 py-2.5">
+        {/* Left: Icon + Label */}
+        <div className="flex items-center gap-2">
+          <div className="text-pink-500/30">{config.icon}</div>
+          <span className="text-sm font-medium text-white/40">
+            {config.label}
+          </span>
+        </div>
+
+        {/* Right: Coming Soon badge */}
+        <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium text-purple-400">
+          Coming Soon
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function ActionButton({
   icon,
   label,
@@ -1418,28 +1517,34 @@ export function CardGrid() {
 
         {/* Mobile: Cards */}
         <div className="flex w-full max-w-md flex-col gap-2 md:hidden">
-          {!isLoading &&
-            selectedAccounts.map((account) => (
-              <MobilePlatformCard
-                key={account.id}
-                account={account}
-                onSettingsClick={() => openSettings(account)}
-                onAccountClick={() => openAccount(account)}
-                onLogsClick={() => openLogs(account)}
-                onDatabaseClick={() => openDatabase(account)}
-                onDeleteClick={() => openDeleteModal(account)}
-                onToggleAutomation={() => handleToggleAutomation(account)}
-                onTestPipeline={() => handleRunPipeline(account)}
-                canDelete={account.id !== selectedFirstId}
-                isRunning={runningAccounts.has(account.id)}
-                isToggling={togglingAccounts.has(account.id)}
-              />
-            ))}
-          {selectedAccounts.length < MAX_ACCOUNTS_PER_PLATFORM && (
-            <MobileAddCard
-              platform={selectedPlatform}
-              onClick={() => handleCreateAccount(selectedPlatform)}
-            />
+          {selectedPlatform === "instagram" ? (
+            <MobileComingSoonCard platform="instagram" />
+          ) : (
+            <>
+              {!isLoading &&
+                selectedAccounts.map((account) => (
+                  <MobilePlatformCard
+                    key={account.id}
+                    account={account}
+                    onSettingsClick={() => openSettings(account)}
+                    onAccountClick={() => openAccount(account)}
+                    onLogsClick={() => openLogs(account)}
+                    onDatabaseClick={() => openDatabase(account)}
+                    onDeleteClick={() => openDeleteModal(account)}
+                    onToggleAutomation={() => handleToggleAutomation(account)}
+                    onTestPipeline={() => handleRunPipeline(account)}
+                    canDelete={account.id !== selectedFirstId}
+                    isRunning={runningAccounts.has(account.id)}
+                    isToggling={togglingAccounts.has(account.id)}
+                  />
+                ))}
+              {selectedAccounts.length < MAX_ACCOUNTS_PER_PLATFORM && (
+                <MobileAddCard
+                  platform={selectedPlatform}
+                  onClick={() => handleCreateAccount(selectedPlatform)}
+                />
+              )}
+            </>
           )}
         </div>
 
@@ -1503,33 +1608,9 @@ export function CardGrid() {
             )}
           </div>
 
-          {/* Instagram Column */}
+          {/* Instagram Column - Coming Soon */}
           <div className="flex flex-col gap-4">
-            <AnimatePresence mode="popLayout">
-              {!isLoading &&
-                instagramAccounts.map((account) => (
-                  <PlatformCard
-                    key={account.id}
-                    account={account}
-                    onSettingsClick={() => openSettings(account)}
-                    onAccountClick={() => openAccount(account)}
-                    onLogsClick={() => openLogs(account)}
-                    onDatabaseClick={() => openDatabase(account)}
-                    onDeleteClick={() => openDeleteModal(account)}
-                    onToggleAutomation={() => handleToggleAutomation(account)}
-                    onTestPipeline={() => handleRunPipeline(account)}
-                    canDelete={account.id !== firstInstagramId}
-                    isRunning={runningAccounts.has(account.id)}
-                    isToggling={togglingAccounts.has(account.id)}
-                  />
-                ))}
-            </AnimatePresence>
-            {instagramAccounts.length < MAX_ACCOUNTS_PER_PLATFORM && (
-              <AddAccountCard
-                platform="instagram"
-                onClick={() => handleCreateAccount("instagram")}
-              />
-            )}
+            <ComingSoonCard platform="instagram" />
           </div>
 
           {/* Reddit Column */}
