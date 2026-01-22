@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import {
@@ -101,6 +102,12 @@ export function RedditAccountModal({
   const [isSystemPromptModalOpen, setIsSystemPromptModalOpen] = useState(false);
 
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const modelButtonRef = useRef<HTMLButtonElement>(null);
+  const [modelDropdownPos, setModelDropdownPos] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -637,10 +644,23 @@ export function RedditAccountModal({
                       {/* Searchable Dropdown */}
                       <div className="relative" ref={modelDropdownRef}>
                         <motion.button
+                          ref={modelButtonRef}
                           type="button"
-                          onClick={() =>
-                            setIsModelDropdownOpen(!isModelDropdownOpen)
-                          }
+                          onClick={() => {
+                            if (
+                              !isModelDropdownOpen &&
+                              modelButtonRef.current
+                            ) {
+                              const rect =
+                                modelButtonRef.current.getBoundingClientRect();
+                              setModelDropdownPos({
+                                top: rect.bottom + 4,
+                                left: rect.left,
+                                width: rect.width,
+                              });
+                            }
+                            setIsModelDropdownOpen(!isModelDropdownOpen);
+                          }}
                           disabled={openRouterModels.length === 0}
                           className="flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-left"
                           style={{
@@ -682,150 +702,160 @@ export function RedditAccountModal({
                           </motion.div>
                         </motion.button>
 
-                        <AnimatePresence>
-                          {isModelDropdownOpen &&
-                            openRouterModels.length > 0 && (
-                              <motion.div
-                                variants={dropdownVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                                className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-lg border"
-                                style={{
-                                  background:
-                                    "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
-                                  borderColor: "rgba(255,255,255,0.15)",
-                                  boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-                                }}
-                              >
-                                {/* Search Input */}
-                                <div
-                                  className="border-b p-2"
-                                  style={{
-                                    borderColor: "rgba(255,255,255,0.1)",
-                                  }}
-                                >
-                                  <div className="relative">
-                                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
-                                    <input
-                                      type="text"
-                                      value={modelSearchQuery}
-                                      onChange={(e) =>
-                                        setModelSearchQuery(e.target.value)
-                                      }
-                                      placeholder="Search models..."
-                                      className="w-full rounded border bg-transparent py-1.5 pr-3 pl-8 text-sm text-white/90 outline-none"
+                        {typeof document !== "undefined" &&
+                          createPortal(
+                            <AnimatePresence>
+                              {isModelDropdownOpen &&
+                                openRouterModels.length > 0 && (
+                                  <motion.div
+                                    variants={dropdownVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                    className="overflow-hidden rounded-lg border"
+                                    style={{
+                                      position: "fixed",
+                                      top: modelDropdownPos.top,
+                                      left: modelDropdownPos.left,
+                                      width: modelDropdownPos.width,
+                                      zIndex: 99999,
+                                      background:
+                                        "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
+                                      borderColor: "rgba(255,255,255,0.15)",
+                                      boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+                                    }}
+                                  >
+                                    {/* Search Input */}
+                                    <div
+                                      className="border-b p-2"
                                       style={{
                                         borderColor: "rgba(255,255,255,0.1)",
                                       }}
-                                      autoFocus
-                                    />
-                                  </div>
-                                </div>
-
-                                {/* Model List */}
-                                <div
-                                  className="max-h-48 overflow-y-auto"
-                                  data-lenis-prevent
-                                >
-                                  {openRouterModels
-                                    .filter(
-                                      (model) =>
-                                        model.name
-                                          .toLowerCase()
-                                          .includes(
-                                            modelSearchQuery.toLowerCase()
-                                          ) ||
-                                        model.id
-                                          .toLowerCase()
-                                          .includes(
-                                            modelSearchQuery.toLowerCase()
-                                          )
-                                    )
-                                    .slice(0, 100)
-                                    .map((model, index) => (
-                                      <motion.button
-                                        key={model.id}
-                                        type="button"
-                                        onClick={async () => {
-                                          setSelectedModel(model);
-                                          setIsModelDropdownOpen(false);
-                                          setModelSearchQuery("");
-                                          try {
-                                            await fetch(
-                                              `/api/openrouter/credentials?accountId=${accountId}`,
-                                              {
-                                                method: "POST",
-                                                headers: {
-                                                  "Content-Type":
-                                                    "application/json",
-                                                },
-                                                body: JSON.stringify({
-                                                  selectedModel: model.id,
-                                                }),
-                                              }
-                                            );
-                                          } catch (err) {
-                                            console.error(
-                                              "Failed to save model selection:",
-                                              err
-                                            );
+                                    >
+                                      <div className="relative">
+                                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
+                                        <input
+                                          type="text"
+                                          value={modelSearchQuery}
+                                          onChange={(e) =>
+                                            setModelSearchQuery(e.target.value)
                                           }
-                                        }}
-                                        className="w-full px-3 py-2.5 text-left text-sm"
-                                        style={{
-                                          color:
-                                            selectedModel?.id === model.id
-                                              ? "rgba(255,255,255,1)"
-                                              : "rgba(255,255,255,0.7)",
-                                          backgroundColor:
-                                            selectedModel?.id === model.id
-                                              ? "rgba(255,255,255,0.1)"
-                                              : "rgba(0,0,0,0)",
-                                        }}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.01 }}
-                                        whileHover={{
-                                          backgroundColor:
-                                            "rgba(255,255,255,0.08)",
-                                          color: "rgba(255,255,255,0.9)",
-                                        }}
-                                      >
-                                        <div className="truncate">
-                                          {formatModelName(model.name)}
-                                        </div>
-                                        <div
-                                          className="truncate text-xs"
+                                          placeholder="Search models..."
+                                          className="w-full rounded border bg-transparent py-1.5 pr-3 pl-8 text-sm text-white/90 outline-none"
                                           style={{
-                                            color: "rgba(255,255,255,0.4)",
+                                            borderColor:
+                                              "rgba(255,255,255,0.1)",
                                           }}
-                                        >
-                                          {formatModelPrice(model.pricing)}
-                                        </div>
-                                      </motion.button>
-                                    ))}
-                                  {openRouterModels.filter(
-                                    (model) =>
-                                      model.name
-                                        .toLowerCase()
-                                        .includes(
-                                          modelSearchQuery.toLowerCase()
-                                        ) ||
-                                      model.id
-                                        .toLowerCase()
-                                        .includes(
-                                          modelSearchQuery.toLowerCase()
+                                          autoFocus
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Model List */}
+                                    <div
+                                      className="max-h-48 overflow-y-auto"
+                                      data-lenis-prevent
+                                    >
+                                      {openRouterModels
+                                        .filter(
+                                          (model) =>
+                                            model.name
+                                              .toLowerCase()
+                                              .includes(
+                                                modelSearchQuery.toLowerCase()
+                                              ) ||
+                                            model.id
+                                              .toLowerCase()
+                                              .includes(
+                                                modelSearchQuery.toLowerCase()
+                                              )
                                         )
-                                  ).length === 0 && (
-                                    <p className="px-3 py-4 text-center text-xs text-white/40">
-                                      No models found
-                                    </p>
-                                  )}
-                                </div>
-                              </motion.div>
-                            )}
-                        </AnimatePresence>
+                                        .slice(0, 100)
+                                        .map((model, index) => (
+                                          <motion.button
+                                            key={model.id}
+                                            type="button"
+                                            onClick={async () => {
+                                              setSelectedModel(model);
+                                              setIsModelDropdownOpen(false);
+                                              setModelSearchQuery("");
+                                              try {
+                                                await fetch(
+                                                  `/api/openrouter/credentials?accountId=${accountId}`,
+                                                  {
+                                                    method: "POST",
+                                                    headers: {
+                                                      "Content-Type":
+                                                        "application/json",
+                                                    },
+                                                    body: JSON.stringify({
+                                                      selectedModel: model.id,
+                                                    }),
+                                                  }
+                                                );
+                                              } catch (err) {
+                                                console.error(
+                                                  "Failed to save model selection:",
+                                                  err
+                                                );
+                                              }
+                                            }}
+                                            className="w-full px-3 py-2.5 text-left text-sm"
+                                            style={{
+                                              color:
+                                                selectedModel?.id === model.id
+                                                  ? "rgba(255,255,255,1)"
+                                                  : "rgba(255,255,255,0.7)",
+                                              backgroundColor:
+                                                selectedModel?.id === model.id
+                                                  ? "rgba(255,255,255,0.1)"
+                                                  : "rgba(0,0,0,0)",
+                                            }}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: index * 0.01 }}
+                                            whileHover={{
+                                              backgroundColor:
+                                                "rgba(255,255,255,0.08)",
+                                              color: "rgba(255,255,255,0.9)",
+                                            }}
+                                          >
+                                            <div className="truncate">
+                                              {formatModelName(model.name)}
+                                            </div>
+                                            <div
+                                              className="truncate text-xs"
+                                              style={{
+                                                color: "rgba(255,255,255,0.4)",
+                                              }}
+                                            >
+                                              {formatModelPrice(model.pricing)}
+                                            </div>
+                                          </motion.button>
+                                        ))}
+                                      {openRouterModels.filter(
+                                        (model) =>
+                                          model.name
+                                            .toLowerCase()
+                                            .includes(
+                                              modelSearchQuery.toLowerCase()
+                                            ) ||
+                                          model.id
+                                            .toLowerCase()
+                                            .includes(
+                                              modelSearchQuery.toLowerCase()
+                                            )
+                                      ).length === 0 && (
+                                        <p className="px-3 py-4 text-center text-xs text-white/40">
+                                          No models found
+                                        </p>
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )}
+                            </AnimatePresence>,
+                            document.body
+                          )}
                       </div>
                     </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -69,6 +70,12 @@ export function InstagramAutomationForm({
   const [isPostDropdownOpen, setIsPostDropdownOpen] = useState(false);
   const [postSearchQuery, setPostSearchQuery] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const postButtonRef = useRef<HTMLButtonElement>(null);
+  const [postDropdownPos, setPostDropdownPos] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
 
   const isEditing = !!automation;
 
@@ -295,10 +302,20 @@ export function InstagramAutomationForm({
                       </label>
                       <div className="relative" ref={dropdownRef}>
                         <motion.button
+                          ref={postButtonRef}
                           type="button"
-                          onClick={() =>
-                            setIsPostDropdownOpen(!isPostDropdownOpen)
-                          }
+                          onClick={() => {
+                            if (!isPostDropdownOpen && postButtonRef.current) {
+                              const rect =
+                                postButtonRef.current.getBoundingClientRect();
+                              setPostDropdownPos({
+                                top: rect.bottom + 4,
+                                left: rect.left,
+                                width: rect.width,
+                              });
+                            }
+                            setIsPostDropdownOpen(!isPostDropdownOpen);
+                          }}
                           disabled={isLoadingPosts}
                           className="flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-left"
                           style={{
@@ -356,96 +373,108 @@ export function InstagramAutomationForm({
                           </motion.div>
                         </motion.button>
 
-                        <AnimatePresence>
-                          {isPostDropdownOpen && posts.length > 0 && (
-                            <motion.div
-                              variants={dropdownVariants}
-                              initial="hidden"
-                              animate="visible"
-                              exit="exit"
-                              className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-lg border"
-                              style={{
-                                background:
-                                  "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
-                                borderColor: "rgba(255,255,255,0.15)",
-                                boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-                              }}
-                            >
-                              {/* Search */}
-                              <div
-                                className="border-b p-2"
-                                style={{ borderColor: "rgba(255,255,255,0.1)" }}
-                              >
-                                <div className="relative">
-                                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
-                                  <input
-                                    type="text"
-                                    value={postSearchQuery}
-                                    onChange={(e) =>
-                                      setPostSearchQuery(e.target.value)
-                                    }
-                                    placeholder="Search posts..."
-                                    className="w-full rounded border bg-transparent py-1.5 pr-3 pl-8 text-sm text-white/90 outline-none"
+                        {typeof document !== "undefined" &&
+                          createPortal(
+                            <AnimatePresence>
+                              {isPostDropdownOpen && posts.length > 0 && (
+                                <motion.div
+                                  variants={dropdownVariants}
+                                  initial="hidden"
+                                  animate="visible"
+                                  exit="exit"
+                                  className="overflow-hidden rounded-lg border"
+                                  style={{
+                                    position: "fixed",
+                                    top: postDropdownPos.top,
+                                    left: postDropdownPos.left,
+                                    width: postDropdownPos.width,
+                                    zIndex: 99999,
+                                    background:
+                                      "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
+                                    borderColor: "rgba(255,255,255,0.15)",
+                                    boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+                                  }}
+                                >
+                                  {/* Search */}
+                                  <div
+                                    className="border-b p-2"
                                     style={{
                                       borderColor: "rgba(255,255,255,0.1)",
                                     }}
-                                    autoFocus
-                                  />
-                                </div>
-                              </div>
+                                  >
+                                    <div className="relative">
+                                      <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
+                                      <input
+                                        type="text"
+                                        value={postSearchQuery}
+                                        onChange={(e) =>
+                                          setPostSearchQuery(e.target.value)
+                                        }
+                                        placeholder="Search posts..."
+                                        className="w-full rounded border bg-transparent py-1.5 pr-3 pl-8 text-sm text-white/90 outline-none"
+                                        style={{
+                                          borderColor: "rgba(255,255,255,0.1)",
+                                        }}
+                                        autoFocus
+                                      />
+                                    </div>
+                                  </div>
 
-                              {/* Posts List */}
-                              <div className="max-h-48 overflow-y-auto">
-                                {filteredPosts.length === 0 ? (
-                                  <p className="px-3 py-4 text-center text-xs text-white/40">
-                                    {posts.every((p) => p.hasAutomation)
-                                      ? "All posts already have automations"
-                                      : "No posts found"}
-                                  </p>
-                                ) : (
-                                  filteredPosts.map((post) => (
-                                    <motion.button
-                                      key={post.id}
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedPost(post);
-                                        setIsPostDropdownOpen(false);
-                                        setPostSearchQuery("");
-                                      }}
-                                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
-                                      whileHover={{
-                                        backgroundColor:
-                                          "rgba(255,255,255,0.08)",
-                                      }}
-                                    >
-                                      {post.media_url || post.thumbnail_url ? (
-                                        <Image
-                                          src={
-                                            post.thumbnail_url ||
-                                            post.media_url ||
-                                            ""
-                                          }
-                                          alt=""
-                                          width={40}
-                                          height={40}
-                                          className="h-10 w-10 rounded object-cover"
-                                          unoptimized
-                                        />
-                                      ) : (
-                                        <div className="flex h-10 w-10 items-center justify-center rounded bg-white/10">
-                                          <ImageIcon className="h-5 w-5 text-white/40" />
-                                        </div>
-                                      )}
-                                      <span className="truncate text-sm text-white/80">
-                                        {truncateCaption(post.caption)}
-                                      </span>
-                                    </motion.button>
-                                  ))
-                                )}
-                              </div>
-                            </motion.div>
+                                  {/* Posts List */}
+                                  <div className="max-h-48 overflow-y-auto">
+                                    {filteredPosts.length === 0 ? (
+                                      <p className="px-3 py-4 text-center text-xs text-white/40">
+                                        {posts.every((p) => p.hasAutomation)
+                                          ? "All posts already have automations"
+                                          : "No posts found"}
+                                      </p>
+                                    ) : (
+                                      filteredPosts.map((post) => (
+                                        <motion.button
+                                          key={post.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setSelectedPost(post);
+                                            setIsPostDropdownOpen(false);
+                                            setPostSearchQuery("");
+                                          }}
+                                          className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+                                          whileHover={{
+                                            backgroundColor:
+                                              "rgba(255,255,255,0.08)",
+                                          }}
+                                        >
+                                          {post.media_url ||
+                                          post.thumbnail_url ? (
+                                            <Image
+                                              src={
+                                                post.thumbnail_url ||
+                                                post.media_url ||
+                                                ""
+                                              }
+                                              alt=""
+                                              width={40}
+                                              height={40}
+                                              className="h-10 w-10 rounded object-cover"
+                                              unoptimized
+                                            />
+                                          ) : (
+                                            <div className="flex h-10 w-10 items-center justify-center rounded bg-white/10">
+                                              <ImageIcon className="h-5 w-5 text-white/40" />
+                                            </div>
+                                          )}
+                                          <span className="truncate text-sm text-white/80">
+                                            {truncateCaption(post.caption)}
+                                          </span>
+                                        </motion.button>
+                                      ))
+                                    )}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>,
+                            document.body
                           )}
-                        </AnimatePresence>
                       </div>
                     </div>
                   )}

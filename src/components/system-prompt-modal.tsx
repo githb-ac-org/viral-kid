@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -285,6 +286,12 @@ export function SystemPromptModal({
 
   // Ref for click-outside handling
   const sampleDropdownRef = useRef<HTMLDivElement>(null);
+  const sampleButtonRef = useRef<HTMLButtonElement>(null);
+  const [sampleDropdownPos, setSampleDropdownPos] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -564,10 +571,23 @@ You are a helpful social media assistant. Your role is to engage with users in a
                     {/* Sample Content Dropdown */}
                     <div className="relative" ref={sampleDropdownRef}>
                       <motion.button
+                        ref={sampleButtonRef}
                         type="button"
-                        onClick={() =>
-                          setIsSampleDropdownOpen(!isSampleDropdownOpen)
-                        }
+                        onClick={() => {
+                          if (
+                            !isSampleDropdownOpen &&
+                            sampleButtonRef.current
+                          ) {
+                            const rect =
+                              sampleButtonRef.current.getBoundingClientRect();
+                            setSampleDropdownPos({
+                              top: rect.bottom + 4,
+                              left: rect.left,
+                              width: rect.width,
+                            });
+                          }
+                          setIsSampleDropdownOpen(!isSampleDropdownOpen);
+                        }}
                         className="flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-left"
                         style={{
                           background: "rgba(255,255,255,0.05)",
@@ -593,59 +613,71 @@ You are a helpful social media assistant. Your role is to engage with users in a
                         </motion.div>
                       </motion.button>
 
-                      <AnimatePresence>
-                        {isSampleDropdownOpen && (
-                          <motion.div
-                            variants={dropdownVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                            className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-lg border"
-                            style={{
-                              background:
-                                "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
-                              borderColor: "rgba(255,255,255,0.15)",
-                              boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-                            }}
-                          >
-                            <div
-                              className="max-h-48 overflow-y-auto"
-                              data-lenis-prevent
-                            >
-                              {SAMPLE_CONTENT_OPTIONS.map((option, index) => (
-                                <motion.button
-                                  key={option.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedSampleId(option.id);
-                                    setIsSampleDropdownOpen(false);
-                                  }}
-                                  className="w-full px-3 py-2.5 text-left text-sm"
-                                  style={{
-                                    color:
-                                      selectedSampleId === option.id
-                                        ? "rgba(255,255,255,1)"
-                                        : "rgba(255,255,255,0.7)",
-                                    backgroundColor:
-                                      selectedSampleId === option.id
-                                        ? "rgba(255,255,255,0.1)"
-                                        : "rgba(0,0,0,0)",
-                                  }}
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: index * 0.02 }}
-                                  whileHover={{
-                                    backgroundColor: "rgba(255,255,255,0.08)",
-                                    color: "rgba(255,255,255,0.9)",
-                                  }}
+                      {typeof document !== "undefined" &&
+                        createPortal(
+                          <AnimatePresence>
+                            {isSampleDropdownOpen && (
+                              <motion.div
+                                variants={dropdownVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                className="overflow-hidden rounded-lg border"
+                                style={{
+                                  position: "fixed",
+                                  top: sampleDropdownPos.top,
+                                  left: sampleDropdownPos.left,
+                                  width: sampleDropdownPos.width,
+                                  zIndex: 99999,
+                                  background:
+                                    "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
+                                  borderColor: "rgba(255,255,255,0.15)",
+                                  boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+                                }}
+                              >
+                                <div
+                                  className="max-h-48 overflow-y-auto"
+                                  data-lenis-prevent
                                 >
-                                  {option.label}
-                                </motion.button>
-                              ))}
-                            </div>
-                          </motion.div>
+                                  {SAMPLE_CONTENT_OPTIONS.map(
+                                    (option, index) => (
+                                      <motion.button
+                                        key={option.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedSampleId(option.id);
+                                          setIsSampleDropdownOpen(false);
+                                        }}
+                                        className="w-full px-3 py-2.5 text-left text-sm"
+                                        style={{
+                                          color:
+                                            selectedSampleId === option.id
+                                              ? "rgba(255,255,255,1)"
+                                              : "rgba(255,255,255,0.7)",
+                                          backgroundColor:
+                                            selectedSampleId === option.id
+                                              ? "rgba(255,255,255,0.1)"
+                                              : "rgba(0,0,0,0)",
+                                        }}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.02 }}
+                                        whileHover={{
+                                          backgroundColor:
+                                            "rgba(255,255,255,0.08)",
+                                          color: "rgba(255,255,255,0.9)",
+                                        }}
+                                      >
+                                        {option.label}
+                                      </motion.button>
+                                    )
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>,
+                          document.body
                         )}
-                      </AnimatePresence>
                     </div>
 
                     {/* Sample Content Preview */}

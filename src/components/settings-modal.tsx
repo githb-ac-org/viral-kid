@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronDown, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -52,6 +53,18 @@ export function SettingsModal({
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const timeRangeDropdownRef = useRef<HTMLDivElement>(null);
+  const scheduleButtonRef = useRef<HTMLButtonElement>(null);
+  const timeRangeButtonRef = useRef<HTMLButtonElement>(null);
+  const [scheduleDropdownPos, setScheduleDropdownPos] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
+  const [timeRangeDropdownPos, setTimeRangeDropdownPos] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -368,10 +381,23 @@ export function SettingsModal({
                     </label>
                     <div className="relative" ref={timeRangeDropdownRef}>
                       <motion.button
+                        ref={timeRangeButtonRef}
                         type="button"
-                        onClick={() =>
-                          setIsTimeRangeDropdownOpen(!isTimeRangeDropdownOpen)
-                        }
+                        onClick={() => {
+                          if (
+                            !isTimeRangeDropdownOpen &&
+                            timeRangeButtonRef.current
+                          ) {
+                            const rect =
+                              timeRangeButtonRef.current.getBoundingClientRect();
+                            setTimeRangeDropdownPos({
+                              top: rect.bottom + 8,
+                              left: rect.left,
+                              width: rect.width,
+                            });
+                          }
+                          setIsTimeRangeDropdownOpen(!isTimeRangeDropdownOpen);
+                        }}
                         className="flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left backdrop-blur-xl"
                         style={{
                           background: "rgba(255,255,255,0.05)",
@@ -395,55 +421,64 @@ export function SettingsModal({
                         </motion.div>
                       </motion.button>
 
-                      <AnimatePresence>
-                        {isTimeRangeDropdownOpen && (
-                          <motion.div
-                            variants={dropdownVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                            className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border backdrop-blur-xl"
-                            style={{
-                              background:
-                                "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
-                              borderColor: "rgba(255,255,255,0.15)",
-                              boxShadow:
-                                "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)",
-                            }}
-                          >
-                            {TIME_RANGE_OPTIONS.map((option, index) => (
-                              <motion.button
-                                key={option.value}
-                                type="button"
-                                onClick={() => {
-                                  setTimeRange(option.value);
-                                  setIsTimeRangeDropdownOpen(false);
-                                }}
-                                className="w-full px-4 py-3 text-left"
+                      {typeof document !== "undefined" &&
+                        createPortal(
+                          <AnimatePresence>
+                            {isTimeRangeDropdownOpen && (
+                              <motion.div
+                                variants={dropdownVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                className="overflow-hidden rounded-lg border backdrop-blur-xl"
                                 style={{
-                                  color:
-                                    timeRange === option.value
-                                      ? "rgba(255,255,255,1)"
-                                      : "rgba(255,255,255,0.5)",
-                                  backgroundColor:
-                                    timeRange === option.value
-                                      ? "rgba(255,255,255,0.1)"
-                                      : "rgba(0,0,0,0)",
-                                }}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.02 }}
-                                whileHover={{
-                                  backgroundColor: "rgba(255,255,255,0.08)",
-                                  color: "rgba(255,255,255,1)",
+                                  position: "fixed",
+                                  top: timeRangeDropdownPos.top,
+                                  left: timeRangeDropdownPos.left,
+                                  width: timeRangeDropdownPos.width,
+                                  zIndex: 99999,
+                                  background:
+                                    "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
+                                  borderColor: "rgba(255,255,255,0.15)",
+                                  boxShadow:
+                                    "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)",
                                 }}
                               >
-                                {option.label}
-                              </motion.button>
-                            ))}
-                          </motion.div>
+                                {TIME_RANGE_OPTIONS.map((option, index) => (
+                                  <motion.button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => {
+                                      setTimeRange(option.value);
+                                      setIsTimeRangeDropdownOpen(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-left"
+                                    style={{
+                                      color:
+                                        timeRange === option.value
+                                          ? "rgba(255,255,255,1)"
+                                          : "rgba(255,255,255,0.5)",
+                                      backgroundColor:
+                                        timeRange === option.value
+                                          ? "rgba(255,255,255,0.1)"
+                                          : "rgba(0,0,0,0)",
+                                    }}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.02 }}
+                                    whileHover={{
+                                      backgroundColor: "rgba(255,255,255,0.08)",
+                                      color: "rgba(255,255,255,1)",
+                                    }}
+                                  >
+                                    {option.label}
+                                  </motion.button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>,
+                          document.body
                         )}
-                      </AnimatePresence>
                     </div>
                     <p className="mt-1 text-xs text-white/40">
                       Only search posts from this time period
@@ -499,8 +534,20 @@ export function SettingsModal({
                     </label>
                     <div className="relative" ref={dropdownRef}>
                       <motion.button
+                        ref={scheduleButtonRef}
                         type="button"
-                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        onClick={() => {
+                          if (!isDropdownOpen && scheduleButtonRef.current) {
+                            const rect =
+                              scheduleButtonRef.current.getBoundingClientRect();
+                            setScheduleDropdownPos({
+                              top: rect.bottom + 8,
+                              left: rect.left,
+                              width: rect.width,
+                            });
+                          }
+                          setIsDropdownOpen(!isDropdownOpen);
+                        }}
                         className="flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left backdrop-blur-xl"
                         style={{
                           background: "rgba(255,255,255,0.05)",
@@ -522,55 +569,64 @@ export function SettingsModal({
                         </motion.div>
                       </motion.button>
 
-                      <AnimatePresence>
-                        {isDropdownOpen && (
-                          <motion.div
-                            variants={dropdownVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                            className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border backdrop-blur-xl"
-                            style={{
-                              background:
-                                "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
-                              borderColor: "rgba(255,255,255,0.15)",
-                              boxShadow:
-                                "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)",
-                            }}
-                          >
-                            {SCHEDULE_OPTIONS.map((option, index) => (
-                              <motion.button
-                                key={option.value}
-                                type="button"
-                                onClick={() => {
-                                  setSchedule(option.value);
-                                  setIsDropdownOpen(false);
-                                }}
-                                className="w-full px-4 py-3 text-left"
+                      {typeof document !== "undefined" &&
+                        createPortal(
+                          <AnimatePresence>
+                            {isDropdownOpen && (
+                              <motion.div
+                                variants={dropdownVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                className="overflow-hidden rounded-lg border backdrop-blur-xl"
                                 style={{
-                                  color:
-                                    schedule === option.value
-                                      ? "rgba(255,255,255,1)"
-                                      : "rgba(255,255,255,0.5)",
-                                  backgroundColor:
-                                    schedule === option.value
-                                      ? "rgba(255,255,255,0.1)"
-                                      : "rgba(0,0,0,0)",
-                                }}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.02 }}
-                                whileHover={{
-                                  backgroundColor: "rgba(255,255,255,0.08)",
-                                  color: "rgba(255,255,255,1)",
+                                  position: "fixed",
+                                  top: scheduleDropdownPos.top,
+                                  left: scheduleDropdownPos.left,
+                                  width: scheduleDropdownPos.width,
+                                  zIndex: 99999,
+                                  background:
+                                    "linear-gradient(to bottom, rgba(30,30,30,0.98) 0%, rgba(20,20,20,0.98) 100%)",
+                                  borderColor: "rgba(255,255,255,0.15)",
+                                  boxShadow:
+                                    "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)",
                                 }}
                               >
-                                {option.label}
-                              </motion.button>
-                            ))}
-                          </motion.div>
+                                {SCHEDULE_OPTIONS.map((option, index) => (
+                                  <motion.button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => {
+                                      setSchedule(option.value);
+                                      setIsDropdownOpen(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-left"
+                                    style={{
+                                      color:
+                                        schedule === option.value
+                                          ? "rgba(255,255,255,1)"
+                                          : "rgba(255,255,255,0.5)",
+                                      backgroundColor:
+                                        schedule === option.value
+                                          ? "rgba(255,255,255,0.1)"
+                                          : "rgba(0,0,0,0)",
+                                    }}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.02 }}
+                                    whileHover={{
+                                      backgroundColor: "rgba(255,255,255,0.08)",
+                                      color: "rgba(255,255,255,1)",
+                                    }}
+                                  >
+                                    {option.label}
+                                  </motion.button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>,
+                          document.body
                         )}
-                      </AnimatePresence>
                     </div>
                   </div>
                 )}
