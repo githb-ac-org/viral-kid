@@ -2,6 +2,7 @@
 export const JobNames = {
   FETCH_TWITTER_TRENDS: "fetch-twitter-trends",
   FETCH_YOUTUBE_TRENDS: "fetch-youtube-trends",
+  RUN_REDDIT_AUTOMATION: "run-reddit-automation",
   ANALYZE_VIRAL_CONTENT: "analyze-viral-content",
   CLEANUP_OLD_DATA: "cleanup-old-data",
   INSTAGRAM_PROCESS_COMMENT: "instagram-process-comment",
@@ -29,6 +30,10 @@ export interface CleanupOldDataData {
   olderThanDays: number;
 }
 
+export interface RunRedditAutomationData {
+  region?: string;
+}
+
 // Instagram automation jobs
 export interface InstagramProcessCommentData {
   accountId: string;
@@ -51,6 +56,7 @@ export interface InstagramSendDmData {
 export type JobData =
   | FetchTwitterTrendsData
   | FetchYouTubeTrendsData
+  | RunRedditAutomationData
   | AnalyzeViralContentData
   | CleanupOldDataData
   | InstagramProcessCommentData

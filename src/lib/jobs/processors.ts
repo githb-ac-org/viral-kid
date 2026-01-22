@@ -8,6 +8,7 @@ import {
   type InstagramProcessCommentData,
   type InstagramSendDmData,
   type JobResult,
+  type RunRedditAutomationData,
 } from "./types";
 import { db } from "@/lib/db";
 import {
@@ -19,42 +20,109 @@ import {
 } from "@/lib/instagram";
 import { scheduleInstagramSendDm } from "./queues";
 
-// Job processor functions - implement your actual logic here
+// Get the base URL for internal API calls
+function getWorkerBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+  }
+  return "http://localhost:3000";
+}
+
+// Helper to call internal cron endpoints
+async function callCronEndpoint(
+  path: string
+): Promise<{ success: boolean; data?: unknown; error?: string }> {
+  const baseUrl = getWorkerBaseUrl();
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (!cronSecret) {
+    return { success: false, error: "CRON_SECRET not configured" };
+  }
+
+  try {
+    const response = await fetch(`${baseUrl}${path}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${cronSecret}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.error || `HTTP ${response.status}` };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, error: message };
+  }
+}
+
+// Job processor functions
 
 async function processFetchTwitterTrends(
-  data: FetchTwitterTrendsData
+  _data: FetchTwitterTrendsData
 ): Promise<JobResult> {
-  // TODO: Implement actual Twitter trends fetching logic
-  // Example: const twitter = getTwitterClient();
-  // const trends = await twitter.getTrends(data.region);
-  // await db.twitterTrend.createMany({ data: trends });
+  console.log("Running Twitter automation via BullMQ...");
+  const result = await callCronEndpoint("/api/cron/twitter-trends");
 
+  if (!result.success) {
+    return { success: false, message: result.error };
+  }
+
+  const data = result.data as { processed?: number; results?: unknown[] };
   return {
     success: true,
-    message: `Twitter trends fetched for ${data.region || "global"}`,
+    message: `Twitter automation completed. Processed ${data.processed || 0} accounts.`,
+    data: result.data,
   };
 }
 
 async function processFetchYouTubeTrends(
-  data: FetchYouTubeTrendsData
+  _data: FetchYouTubeTrendsData
 ): Promise<JobResult> {
-  // TODO: Implement actual YouTube trends fetching logic
-  // Example: const youtube = getYouTubeClient();
-  // const trends = await youtube.getTrendingVideos(data);
-  // await db.youtubeTrend.createMany({ data: trends });
+  console.log("Running YouTube comments automation via BullMQ...");
+  const result = await callCronEndpoint("/api/cron/youtube-comments");
 
+  if (!result.success) {
+    return { success: false, message: result.error };
+  }
+
+  const data = result.data as { processed?: number; results?: unknown[] };
   return {
     success: true,
-    message: `YouTube trends fetched for ${data.region || "global"}`,
+    message: `YouTube automation completed. Processed ${data.processed || 0} accounts.`,
+    data: result.data,
+  };
+}
+
+async function processRunRedditAutomation(
+  _data: RunRedditAutomationData
+): Promise<JobResult> {
+  console.log("Running Reddit automation via BullMQ...");
+  const result = await callCronEndpoint("/api/cron/reddit");
+
+  if (!result.success) {
+    return { success: false, message: result.error };
+  }
+
+  const data = result.data as { processed?: number; results?: unknown[] };
+  return {
+    success: true,
+    message: `Reddit automation completed. Processed ${data.processed || 0} accounts.`,
+    data: result.data,
   };
 }
 
 async function processAnalyzeViralContent(
   data: AnalyzeViralContentData
 ): Promise<JobResult> {
-  // TODO: Implement content analysis logic
-  // This could include sentiment analysis, engagement metrics, etc.
-
+  // Reserved for future content analysis features
   return {
     success: true,
     message: `Content ${data.contentId} analyzed`,
@@ -62,17 +130,20 @@ async function processAnalyzeViralContent(
 }
 
 async function processCleanupOldData(
-  data: CleanupOldDataData
+  _data: CleanupOldDataData
 ): Promise<JobResult> {
-  // TODO: Implement cleanup logic
-  // Example:
-  // const cutoffDate = new Date();
-  // cutoffDate.setDate(cutoffDate.getDate() - data.olderThanDays);
-  // await db.twitterTrend.deleteMany({ where: { createdAt: { lt: cutoffDate } } });
+  console.log("Running cleanup via BullMQ...");
+  const result = await callCronEndpoint("/api/cron/cleanup");
 
+  if (!result.success) {
+    return { success: false, message: result.error };
+  }
+
+  const data = result.data as { deleted?: Record<string, number> };
   return {
     success: true,
-    message: `Cleaned up data older than ${data.olderThanDays} days`,
+    message: `Cleanup completed. Deleted: ${JSON.stringify(data.deleted || {})}`,
+    data: result.data,
   };
 }
 
@@ -247,6 +318,9 @@ export async function processJob(job: Job): Promise<JobResult> {
 
     case JobNames.FETCH_YOUTUBE_TRENDS:
       return processFetchYouTubeTrends(job.data as FetchYouTubeTrendsData);
+
+    case JobNames.RUN_REDDIT_AUTOMATION:
+      return processRunRedditAutomation(job.data as RunRedditAutomationData);
 
     case JobNames.ANALYZE_VIRAL_CONTENT:
       return processAnalyzeViralContent(job.data as AnalyzeViralContentData);

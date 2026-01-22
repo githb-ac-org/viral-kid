@@ -5,6 +5,7 @@ import {
   type JobName,
   type FetchTwitterTrendsData,
   type FetchYouTubeTrendsData,
+  type RunRedditAutomationData,
   type AnalyzeViralContentData,
   type CleanupOldDataData,
   type InstagramProcessCommentData,
@@ -78,6 +79,13 @@ export async function scheduleCleanupOldData(
   return addJob(JobNames.CLEANUP_OLD_DATA, data, options);
 }
 
+export async function scheduleRunRedditAutomation(
+  data: RunRedditAutomationData,
+  options?: JobsOptions
+): Promise<string> {
+  return addJob(JobNames.RUN_REDDIT_AUTOMATION, data, options);
+}
+
 export async function scheduleInstagramProcessComment(
   data: InstagramProcessCommentData,
   options?: JobsOptions
@@ -96,27 +104,37 @@ export async function scheduleInstagramSendDm(
 export async function setupRecurringJobs(): Promise<void> {
   const q = getQueue();
 
-  // Fetch Twitter trends every hour
+  // Twitter automation - every hour
   await q.upsertJobScheduler(
-    "twitter-trends-hourly",
-    { pattern: "0 * * * *" }, // Every hour
+    "twitter-automation-hourly",
+    { pattern: "0 * * * *" }, // Every hour at minute 0
     {
       name: JobNames.FETCH_TWITTER_TRENDS,
-      data: { region: "US" },
+      data: {},
     }
   );
 
-  // Fetch YouTube trends every 2 hours
+  // YouTube comments automation - every 5 minutes
   await q.upsertJobScheduler(
-    "youtube-trends-every-2h",
-    { pattern: "0 */2 * * *" }, // Every 2 hours
+    "youtube-comments-every-5min",
+    { pattern: "*/5 * * * *" }, // Every 5 minutes
     {
       name: JobNames.FETCH_YOUTUBE_TRENDS,
-      data: { region: "US" },
+      data: {},
     }
   );
 
-  // Cleanup old data daily at 3 AM
+  // Reddit automation - every hour
+  await q.upsertJobScheduler(
+    "reddit-automation-hourly",
+    { pattern: "0 * * * *" }, // Every hour at minute 0
+    {
+      name: JobNames.RUN_REDDIT_AUTOMATION,
+      data: {},
+    }
+  );
+
+  // Cleanup old data daily at 3 AM UTC
   await q.upsertJobScheduler(
     "cleanup-daily",
     { pattern: "0 3 * * *" }, // Every day at 3 AM
@@ -126,7 +144,11 @@ export async function setupRecurringJobs(): Promise<void> {
     }
   );
 
-  console.log("Recurring jobs scheduled successfully");
+  console.log("Recurring jobs scheduled:");
+  console.log("  - Twitter automation: hourly");
+  console.log("  - YouTube comments: every 5 minutes");
+  console.log("  - Reddit automation: hourly");
+  console.log("  - Cleanup: daily at 3 AM UTC");
 }
 
 export async function closeQueue(): Promise<void> {
