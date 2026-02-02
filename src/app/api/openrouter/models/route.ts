@@ -90,6 +90,38 @@ export async function POST(request: Request) {
       );
     }
 
+    // Known vision model patterns (fallback if architecture data is missing)
+    const visionModelPatterns = [
+      /gpt-4o/i,
+      /gpt-4-vision/i,
+      /gpt-4-turbo/i,
+      /claude-3/i,
+      /claude-sonnet-4/i,
+      /claude-opus-4/i,
+      /gemini.*pro/i,
+      /gemini.*flash/i,
+      /gemini-2/i,
+      /llama-3\.2.*vision/i,
+      /llama-4/i,
+      /pixtral/i,
+      /qwen.*vl/i,
+      /yi-vision/i,
+      /intern.*vl/i,
+      /molmo/i,
+    ];
+
+    const isVisionModel = (
+      modelId: string,
+      architecture?: { input_modalities?: string[] }
+    ) => {
+      // First check architecture data from API
+      if (architecture?.input_modalities?.includes("image")) {
+        return true;
+      }
+      // Fallback: check if model ID matches known vision patterns
+      return visionModelPatterns.some((pattern) => pattern.test(modelId));
+    };
+
     // Use transaction for batch upserts (more efficient than sequential)
     const modelData = data.data.map((model) => ({
       id: model.id,
@@ -97,8 +129,7 @@ export async function POST(request: Request) {
       description: model.description || null,
       contextLength: model.context_length || 0,
       pricing: model.pricing ? JSON.stringify(model.pricing) : null,
-      supportsVision:
-        model.architecture?.input_modalities?.includes("image") ?? false,
+      supportsVision: isVisionModel(model.id, model.architecture),
     }));
 
     // Batch upsert using transaction
