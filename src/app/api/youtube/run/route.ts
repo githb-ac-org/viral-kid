@@ -72,6 +72,7 @@ async function generateReplyWithLLM(
         ],
         max_tokens: 150,
         temperature: 0.8,
+        include_reasoning: true,
       }),
     }
   );
@@ -83,48 +84,12 @@ async function generateReplyWithLLM(
 
   const data = await response.json();
   const message = data.choices?.[0]?.message;
-  let reply = message?.content?.trim();
-  const hasReasoningField = !!message?.reasoning;
+  const reply = message?.content?.trim();
 
   if (!reply) {
     throw new Error(
       `Empty response from LLM. Response: ${JSON.stringify(data)}`
     );
-  }
-
-  // Only clean up if no separate reasoning field (model dumped thinking into content)
-  if (!hasReasoningField) {
-    const thinkingPatterns = [
-      /^(The user wants|I need to|Let me|Here's my|My reply|I'll write|I should|This comment|The comment).*?[.!]\s*/i,
-      /^(Key details|Details|Context|Analysis|Reasoning|Thinking|Response):.*?\n+/i,
-      /^[-•*]\s+.*?\n/gm,
-      /^\d+\.\s+.*?\n/gm,
-    ];
-
-    for (const pattern of thinkingPatterns) {
-      reply = reply.replace(pattern, "").trim();
-    }
-
-    if (
-      reply.includes("Constraints:") ||
-      reply.includes("The user wants") ||
-      reply.includes("Key details:")
-    ) {
-      const quotedMatch = reply.match(/"([^"]+)"/);
-      if (quotedMatch && quotedMatch[1].length > 10) {
-        reply = quotedMatch[1];
-      } else {
-        const lines = reply
-          .split("\n")
-          .filter((l: string) => l.trim().length > 0);
-        const lastLine = lines[lines.length - 1]?.trim();
-        if (lastLine && lastLine.length > 10 && lastLine.length < 600) {
-          reply = lastLine;
-        }
-      }
-    }
-
-    reply = reply.replace(/^["']|["']$/g, "").trim();
   }
 
   // Ensure reply is under 500 chars (YouTube comment limit is 10,000 but we keep it short)
