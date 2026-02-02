@@ -10,6 +10,10 @@ interface OpenRouterModelResponse {
     prompt?: string;
     completion?: string;
   };
+  architecture?: {
+    input_modalities?: string[];
+    output_modalities?: string[];
+  };
 }
 
 interface OpenRouterAPIResponse {
@@ -17,9 +21,13 @@ interface OpenRouterAPIResponse {
 }
 
 // GET - Fetch models from database
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const visionOnly = url.searchParams.get("vision") === "true";
+
     const models = await db.openRouterModel.findMany({
+      where: visionOnly ? { supportsVision: true } : undefined,
       orderBy: { name: "asc" },
     });
 
@@ -89,6 +97,8 @@ export async function POST(request: Request) {
       description: model.description || null,
       contextLength: model.context_length || 0,
       pricing: model.pricing ? JSON.stringify(model.pricing) : null,
+      supportsVision:
+        model.architecture?.input_modalities?.includes("image") ?? false,
     }));
 
     // Batch upsert using transaction
@@ -107,6 +117,7 @@ export async function POST(request: Request) {
                 description: model.description,
                 contextLength: model.contextLength,
                 pricing: model.pricing,
+                supportsVision: model.supportsVision,
               },
               create: model,
             })

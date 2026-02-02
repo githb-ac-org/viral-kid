@@ -244,10 +244,12 @@ model OpenRouterModel {
   description     String?  // Model description
   contextLength   Int      @default(0) // Max context length
   pricing         String?  // JSON string with pricing info
+  supportsVision  Boolean  @default(false) // Supports image input (multimodal)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([name])
+  @@index([supportsVision])
 }
 
 // Log entries for tracking account activity
