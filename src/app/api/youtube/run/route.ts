@@ -70,7 +70,7 @@ async function generateReplyWithLLM(
             content: `Write a reply to this YouTube comment from ${authorName} on your video "${videoTitle}":\n\n"${commentContent}"`,
           },
         ],
-        max_tokens: 150,
+        max_tokens: 500,
         temperature: 0.8,
         include_reasoning: true,
       }),
