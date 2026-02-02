@@ -177,14 +177,13 @@ export async function generateReply(
     styleInstructions.push("Use casual grammar with minor typos.");
 
   const fullSystemPrompt = [
-    systemPrompt ||
-      "You are a helpful Reddit user who provides thoughtful comments on posts.",
-    "Keep your reply concise and relevant (under 500 characters).",
-    "Be genuine and add value to the discussion.",
-    "Match the tone of the subreddit - some are casual, some are more serious.",
+    systemPrompt,
+    "Keep your reply under 500 characters.",
     ...styleInstructions,
     "IMPORTANT: Output ONLY the comment text itself. Do not include any reasoning, analysis, thinking, explanations, or meta-commentary. Just the raw comment text.",
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   // Build post content - include body if available
   let postContent = `Title: "${postTitle}"`;

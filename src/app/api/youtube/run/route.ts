@@ -43,13 +43,13 @@ async function generateReplyWithLLM(
     styleInstructions.push("Use casual grammar with minor typos.");
 
   const fullSystemPrompt = [
-    systemPrompt ||
-      "You are a friendly YouTube creator responding to comments on your videos.",
-    "Keep your reply concise and engaging (under 500 characters).",
-    "Be appreciative and conversational.",
+    systemPrompt,
+    "Keep your reply under 500 characters.",
     ...styleInstructions,
     "IMPORTANT: Output ONLY the reply text itself. Do not include any reasoning, analysis, thinking, explanations, or meta-commentary. Just the raw reply text.",
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const response = await fetch(
     "https://openrouter.ai/api/v1/chat/completions",

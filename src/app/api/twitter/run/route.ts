@@ -202,12 +202,13 @@ async function generateReplyWithLLM(
     styleInstructions.push("Use casual grammar with minor typos.");
 
   const fullSystemPrompt = [
-    systemPrompt || "You are a witty Twitter user who writes engaging replies.",
+    systemPrompt,
     "Keep your reply under 280 characters.",
-    "Be conversational and engaging.",
     ...styleInstructions,
     "IMPORTANT: Output ONLY the tweet reply text itself. Do not include any reasoning, analysis, thinking, explanations, or meta-commentary. Just the raw reply text.",
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const response = await fetch(
     "https://openrouter.ai/api/v1/chat/completions",
