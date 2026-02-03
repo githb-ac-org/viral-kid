@@ -91,23 +91,41 @@ export async function POST(request: Request) {
     }
 
     // Known vision model patterns (fallback if architecture data is missing)
+    // Updated 2026-02 based on current OpenRouter offerings
     const visionModelPatterns = [
+      // OpenAI (GPT-5 series, GPT-4o still available)
+      /gpt-5/i,
       /gpt-4o/i,
-      /gpt-4-vision/i,
-      /gpt-4-turbo/i,
-      /claude-3/i,
+      // Anthropic (Claude 4/4.5 series)
+      /claude-4/i,
       /claude-sonnet-4/i,
       /claude-opus-4/i,
-      /gemini.*pro/i,
-      /gemini.*flash/i,
-      /gemini-2/i,
-      /llama-3\.2.*vision/i,
+      // Google (Gemini 2.5/3, Gemma 3)
+      /gemini-3/i,
+      /gemini-2\.5/i,
+      /gemini-2\.0/i,
+      /gemma-3/i,
+      // Meta (Llama 4 Maverick/Scout)
       /llama-4/i,
-      /pixtral/i,
+      // Qwen VL series (qwen2.5-vl, qwen3-vl)
+      /qwen3-vl/i,
+      /qwen2\.5-vl/i,
       /qwen.*vl/i,
-      /yi-vision/i,
-      /intern.*vl/i,
-      /molmo/i,
+      // ByteDance Seed (multimodal)
+      /seed-1\.6/i,
+      /seed-1\.5/i,
+      // Z.AI GLM vision models
+      /glm-4\.6v/i,
+      /glm-4\.5v/i,
+      /glm-4v/i,
+      // xAI Grok (vision capable)
+      /grok-4/i,
+      /grok.*vision/i,
+      // Mistral
+      /pixtral/i,
+      // Other current vision models
+      /deepseek.*vl/i,
+      /internvl/i,
     ];
 
     const isVisionModel = (
