@@ -106,17 +106,20 @@ model Account {
 }
 
 model TwitterConfiguration {
-  id                String   @id @default(cuid())
-  enabled           Boolean  @default(false) // Whether automation is active
-  searchTerm        String   @default("")
-  schedule          String   @default("every_hour") // every_5_min, every_10_min, every_30_min, every_hour, every_3_hours, every_6_hours
-  minimumLikesCount Int      @default(20) // Minimum likes filter for search
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  enabled              Boolean  @default(false) // Whether automation is active
+  searchTerm           String   @default("")
+  schedule             String   @default("every_hour") // every_5_min, every_10_min, every_30_min, every_hour, every_3_hours, every_6_hours
+  minimumLikesCount    Int      @default(20) // Minimum likes filter for search
+  removeReplies        Boolean  @default(true) // Exclude reply tweets from search
+  removePostsWithLinks Boolean  @default(false) // Exclude tweets containing links (also removes media tweets)
+  removePostsWithMedia Boolean  @default(false) // Exclude tweets with images/videos
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   // Relation to Account
-  accountId         String   @unique
-  account           Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId            String   @unique
+  account              Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 }
 
 model TwitterCredentials {

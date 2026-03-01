@@ -45,6 +45,9 @@ export const twitterConfigSchema = z.object({
   searchTerm: z.string().min(1).max(100).optional(),
   schedule: scheduleSchema.optional(),
   minimumLikesCount: z.number().int().min(0).max(1000000).optional(),
+  removeReplies: z.boolean().optional(),
+  removePostsWithLinks: z.boolean().optional(),
+  removePostsWithMedia: z.boolean().optional(),
 });
 
 export const youtubeConfigSchema = z.object({

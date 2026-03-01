@@ -43,6 +43,9 @@ export async function GET(request: Request) {
       searchTerm: config.searchTerm,
       schedule: config.schedule,
       minimumLikesCount: config.minimumLikesCount,
+      removeReplies: config.removeReplies,
+      removePostsWithLinks: config.removePostsWithLinks,
+      removePostsWithMedia: config.removePostsWithMedia,
     });
   } catch (error) {
     console.error("Failed to fetch Twitter configuration:", error);
@@ -79,7 +82,14 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { searchTerm, schedule, minimumLikesCount } = body;
+    const {
+      searchTerm,
+      schedule,
+      minimumLikesCount,
+      removeReplies,
+      removePostsWithLinks,
+      removePostsWithMedia,
+    } = body;
 
     // Validate schedule value
     const validSchedules = [
@@ -115,6 +125,13 @@ export async function POST(request: Request) {
         ...(searchTerm !== undefined && { searchTerm }),
         ...(schedule && { schedule }),
         ...(minimumLikesCount !== undefined && { minimumLikesCount }),
+        ...(typeof removeReplies === "boolean" && { removeReplies }),
+        ...(typeof removePostsWithLinks === "boolean" && {
+          removePostsWithLinks,
+        }),
+        ...(typeof removePostsWithMedia === "boolean" && {
+          removePostsWithMedia,
+        }),
       },
     });
 
@@ -123,6 +140,9 @@ export async function POST(request: Request) {
       searchTerm: config.searchTerm,
       schedule: config.schedule,
       minimumLikesCount: config.minimumLikesCount,
+      removeReplies: config.removeReplies,
+      removePostsWithLinks: config.removePostsWithLinks,
+      removePostsWithMedia: config.removePostsWithMedia,
     });
   } catch (error) {
     console.error("Failed to save Twitter configuration:", error);

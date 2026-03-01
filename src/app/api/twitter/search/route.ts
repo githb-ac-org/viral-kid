@@ -79,14 +79,16 @@ export async function POST(request: Request) {
     const minimumLikesCount = account.twitterConfig?.minimumLikesCount ?? 20;
     const rapidApiKey = account.twitterCredentials.rapidApiKey;
 
-    // Build filters
+    // Build filters from account config
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
     const filters = {
       since: today,
       minimumLikesCount,
-      removePostsWithMedia: true,
-      removeReplies: true,
-      removePostsWithLinks: true,
+      removePostsWithMedia:
+        account.twitterConfig?.removePostsWithMedia ?? false,
+      removeReplies: account.twitterConfig?.removeReplies ?? true,
+      removePostsWithLinks:
+        account.twitterConfig?.removePostsWithLinks ?? false,
       // Note: retweets are excluded by default (includeRetweets defaults to false)
     };
 

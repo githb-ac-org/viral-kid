@@ -41,6 +41,9 @@ export function SettingsModal({
   const [searchTerm, setSearchTerm] = useState("");
   const [schedule, setSchedule] = useState("every_hour");
   const [minimumLikesCount, setMinimumLikesCount] = useState(20);
+  const [removeReplies, setRemoveReplies] = useState(true);
+  const [removePostsWithLinks, setRemovePostsWithLinks] = useState(false);
+  const [removePostsWithMedia, setRemovePostsWithMedia] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -125,6 +128,15 @@ export function SettingsModal({
           if (data.minimumLikesCount !== undefined) {
             setMinimumLikesCount(data.minimumLikesCount);
           }
+          if (data.removeReplies !== undefined) {
+            setRemoveReplies(data.removeReplies);
+          }
+          if (data.removePostsWithLinks !== undefined) {
+            setRemovePostsWithLinks(data.removePostsWithLinks);
+          }
+          if (data.removePostsWithMedia !== undefined) {
+            setRemovePostsWithMedia(data.removePostsWithMedia);
+          }
           // Reddit-specific
           if (data.keywords !== undefined) {
             setKeywords(data.keywords);
@@ -161,7 +173,14 @@ export function SettingsModal({
 
       let body: string;
       if (platform === "twitter") {
-        body = JSON.stringify({ searchTerm, schedule, minimumLikesCount });
+        body = JSON.stringify({
+          searchTerm,
+          schedule,
+          minimumLikesCount,
+          removeReplies,
+          removePostsWithLinks,
+          removePostsWithMedia,
+        });
       } else if (platform === "reddit") {
         body = JSON.stringify({
           keywords,
@@ -335,6 +354,69 @@ export function SettingsModal({
                     <p className="mt-1 text-xs text-white/40">
                       Only show tweets with at least this many likes
                     </p>
+                  </div>
+                )}
+
+                {/* Search Filters - Twitter only */}
+                {platform === "twitter" && (
+                  <div className="mb-5">
+                    <label className="mb-3 block text-sm font-semibold tracking-wide text-white/90">
+                      Search Filters
+                    </label>
+                    <div className="space-y-3">
+                      <label className="flex cursor-pointer items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={removeReplies}
+                          onChange={(e) => setRemoveReplies(e.target.checked)}
+                          className="h-4 w-4 rounded border-white/20 bg-white/5 accent-white/90"
+                        />
+                        <div>
+                          <span className="text-sm text-white/80">
+                            Exclude replies
+                          </span>
+                          <p className="text-xs text-white/40">
+                            Skip tweets that are replies to other tweets
+                          </p>
+                        </div>
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={removePostsWithLinks}
+                          onChange={(e) =>
+                            setRemovePostsWithLinks(e.target.checked)
+                          }
+                          className="h-4 w-4 rounded border-white/20 bg-white/5 accent-white/90"
+                        />
+                        <div>
+                          <span className="text-sm text-white/80">
+                            Exclude tweets with links
+                          </span>
+                          <p className="text-xs text-white/40">
+                            Warning: also removes tweets with images/videos
+                          </p>
+                        </div>
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={removePostsWithMedia}
+                          onChange={(e) =>
+                            setRemovePostsWithMedia(e.target.checked)
+                          }
+                          className="h-4 w-4 rounded border-white/20 bg-white/5 accent-white/90"
+                        />
+                        <div>
+                          <span className="text-sm text-white/80">
+                            Exclude tweets with media
+                          </span>
+                          <p className="text-xs text-white/40">
+                            Skip tweets containing images, videos, or GIFs
+                          </p>
+                        </div>
+                      </label>
+                    </div>
                   </div>
                 )}
 

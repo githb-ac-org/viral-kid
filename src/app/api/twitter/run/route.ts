@@ -123,7 +123,12 @@ async function refreshTokenIfNeeded(
 async function fetchTweetsFromRapidAPI(
   rapidApiKey: string,
   searchTerm: string,
-  minimumLikesCount: number
+  minimumLikesCount: number,
+  filterConfig: {
+    removeReplies: boolean;
+    removePostsWithLinks: boolean;
+    removePostsWithMedia: boolean;
+  }
 ): Promise<ParsedTweet[]> {
   // Use rolling 24-hour window instead of "today" (UTC date can be very short window)
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -132,10 +137,12 @@ async function fetchTweetsFromRapidAPI(
   const filters = {
     since,
     minimumLikesCount,
-    // Allow images but still remove videos via client-side filtering
-    removePostsWithMedia: false,
-    removeReplies: true,
-    removePostsWithLinks: true,
+    removePostsWithMedia: filterConfig.removePostsWithMedia,
+    removeReplies: filterConfig.removeReplies,
+    // NOTE: removePostsWithLinks uses Twitter's -filter:links which also
+    // excludes tweets with media (images/videos) since Twitter wraps media
+    // in t.co URLs. Use with caution on media-heavy topics.
+    removePostsWithLinks: filterConfig.removePostsWithLinks,
   };
 
   const searchUrl = new URL(
@@ -169,6 +176,10 @@ async function fetchTweetsFromRapidAPI(
   const data: RapidAPIResponse = await response.json();
   const tweets: ParsedTweet[] = [];
   const entries = data.entries?.[0]?.entries || [];
+
+  console.log(
+    `[twitter-search] query="${searchTerm}" groups=${data.entries?.length ?? 0} entries=${entries.length}`
+  );
 
   for (const entry of entries) {
     if (!entry.entryId?.startsWith("tweet-")) continue;
@@ -508,7 +519,12 @@ export async function POST(request: Request) {
       tweets = await fetchTweetsFromRapidAPI(
         twitterCredentials.rapidApiKey,
         searchTerm,
-        minimumLikesCount
+        minimumLikesCount,
+        {
+          removeReplies: twitterConfig?.removeReplies ?? true,
+          removePostsWithLinks: twitterConfig?.removePostsWithLinks ?? false,
+          removePostsWithMedia: twitterConfig?.removePostsWithMedia ?? false,
+        }
       );
     } catch (error) {
       const message =
