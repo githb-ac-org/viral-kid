@@ -552,7 +552,7 @@ export async function POST(request: Request) {
       `Found ${tweets.length} tweets with ${minimumLikesCount}+ likes`
     );
 
-    // Step 3: Store tweets temporarily and filter out already replied
+    // Step 3: Filter out already replied tweets and restricted users
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     // Get existing interactions for this account
@@ -568,9 +568,17 @@ export async function POST(request: Request) {
       existingInteractions.filter((i) => i.ourReply).map((i) => i.tweetId)
     );
 
-    // Filter out already replied tweets
+    // Get restricted users (reply restrictions)
+    const restrictedUsers = await db.restrictedTwitterUser.findMany({
+      where: { accountId },
+      select: { username: true },
+    });
+    const restrictedUsernames = new Set(restrictedUsers.map((r) => r.username));
+
+    // Filter out already replied tweets and restricted users
     const unrepliedTweets = tweets.filter(
-      (t) => !repliedTweetIds.has(t.tweetId)
+      (t) =>
+        !repliedTweetIds.has(t.tweetId) && !restrictedUsernames.has(t.username)
     );
 
     if (unrepliedTweets.length === 0) {
@@ -668,13 +676,19 @@ export async function POST(request: Request) {
         });
         replyId = result.data.id;
       } catch (error: unknown) {
-        // Check if this is a reply restriction (403) — skip to next tweet
+        // Check if this is a reply restriction (403) — remember and skip
         const err = error as { code?: number; data?: unknown };
         if (err.code === 403) {
+          // Store this user so we skip their tweets in future runs
+          await db.restrictedTwitterUser
+            .create({
+              data: { accountId, username: tweet.username },
+            })
+            .catch(() => {});
           await createLog(
             accountId,
             "warning",
-            `@${tweet.username} has reply restrictions, trying next tweet...`
+            `@${tweet.username} has reply restrictions (saved, will skip in future), trying next...`
           );
           continue;
         }

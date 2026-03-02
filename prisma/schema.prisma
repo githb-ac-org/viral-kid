@@ -94,7 +94,8 @@ model Account {
   redditConfig          RedditConfiguration?
   openRouterCredentials OpenRouterCredentials?
   logs                  Log[]
-  tweetInteractions     TweetInteraction[]
+  tweetInteractions      TweetInteraction[]
+  restrictedTwitterUsers RestrictedTwitterUser[]
   youtubeCommentInteractions YouTubeCommentInteraction[]
   redditInteractions    RedditInteraction[]
   instagramAutomations  InstagramAutomation[]
@@ -296,6 +297,20 @@ model TweetInteraction {
   @@index([accountId])
   @@index([createdAt])
   @@index([accountId, createdAt])
+}
+
+// Twitter users whose tweets have reply restrictions - skip these in future runs
+model RestrictedTwitterUser {
+  id        String   @id @default(cuid())
+  username  String
+  createdAt DateTime @default(now())
+
+  // Relation to Account
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, username])
+  @@index([accountId])
 }
 
 // YouTube comment interactions - tracks comments and our responses
