@@ -326,7 +326,10 @@ export default function AdminPage() {
             </div>
 
             {/* Invites List */}
-            <div className="max-h-[400px] overflow-y-auto p-4">
+            <div
+              className="max-h-[400px] overflow-y-auto p-4"
+              data-lenis-prevent
+            >
               {invites.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <Mail className="h-8 w-8 text-white/20" />

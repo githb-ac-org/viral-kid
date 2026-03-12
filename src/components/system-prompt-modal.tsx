@@ -424,6 +424,7 @@ export function SystemPromptModal({
           {/* Modal */}
           <motion.div
             className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto md:max-w-5xl rounded-2xl border"
+            data-lenis-prevent
             style={{
               background:
                 "linear-gradient(to bottom, rgba(30,30,35,0.98) 0%, rgba(20,20,25,0.99) 100%)",
@@ -459,7 +460,7 @@ export function SystemPromptModal({
             </div>
 
             {/* Content */}
-            <div className="p-6">
+            <div className="p-6" data-lenis-prevent>
               {/* Loading overlay */}
               <AnimatePresence>
                 {isLoading && (
@@ -496,7 +497,8 @@ export function SystemPromptModal({
 
 Example:
 You are a helpful social media assistant. Your role is to engage with users in a friendly manner. Keep replies concise and relevant.`}
-                      className="h-48 w-full resize-none rounded-lg border px-4 py-3 text-sm text-white/90 outline-none transition-colors duration-200"
+                      data-lenis-prevent
+                      className="h-48 w-full resize-none overflow-y-auto rounded-lg border px-4 py-3 text-sm text-white/90 outline-none transition-colors duration-200"
                       style={{
                         background: "rgba(255,255,255,0.05)",
                         borderColor: "rgba(255,255,255,0.1)",

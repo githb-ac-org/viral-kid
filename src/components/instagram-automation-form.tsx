@@ -421,7 +421,10 @@ export function InstagramAutomationForm({
                                   </div>
 
                                   {/* Posts List */}
-                                  <div className="max-h-48 overflow-y-auto">
+                                  <div
+                                    className="max-h-48 overflow-y-auto"
+                                    data-lenis-prevent
+                                  >
                                     {filteredPosts.length === 0 ? (
                                       <p className="px-3 py-4 text-center text-xs text-white/40">
                                         {posts.every((p) => p.hasAutomation)
@@ -559,7 +562,8 @@ export function InstagramAutomationForm({
                         "Sent to your DMs!\nCheck your inbox!\nOn its way!"
                       }
                       rows={5}
-                      className="w-full resize-none rounded-lg border px-3 py-2.5 text-sm text-white/90 outline-none"
+                      data-lenis-prevent
+                      className="w-full resize-none overflow-y-auto rounded-lg border px-3 py-2.5 text-sm text-white/90 outline-none"
                       style={{
                         background: "rgba(255,255,255,0.05)",
                         borderColor: "rgba(255,255,255,0.1)",
@@ -583,7 +587,8 @@ export function InstagramAutomationForm({
                         "Hey {{username}}! Here's the link: https://...\nThanks for commenting! Your guide: https://..."
                       }
                       rows={5}
-                      className="w-full resize-none rounded-lg border px-3 py-2.5 text-sm text-white/90 outline-none"
+                      data-lenis-prevent
+                      className="w-full resize-none overflow-y-auto rounded-lg border px-3 py-2.5 text-sm text-white/90 outline-none"
                       style={{
                         background: "rgba(255,255,255,0.05)",
                         borderColor: "rgba(255,255,255,0.1)",
