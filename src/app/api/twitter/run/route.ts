@@ -362,7 +362,7 @@ async function generateReplyWithLLM(
               content: userMessage,
             },
           ],
-          max_tokens: 500,
+          max_tokens: 8000,
           temperature: 0.8,
         }),
       }

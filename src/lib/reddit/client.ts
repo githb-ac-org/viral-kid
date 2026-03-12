@@ -251,7 +251,7 @@ export async function generateReply(
               content: `Write a comment for this Reddit post in r/${subreddit} by u/${postAuthor}:\n\n${postContent}`,
             },
           ],
-          max_tokens: 500,
+          max_tokens: 8000,
           temperature: 0.8,
         }),
       }
