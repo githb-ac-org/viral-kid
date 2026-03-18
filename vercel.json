@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/twitter-automation",
-      "schedule": "0 * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/youtube-automation",
