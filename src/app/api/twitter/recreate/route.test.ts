@@ -423,6 +423,37 @@ describe("Twitter Recreate API", () => {
     expect(data.message).toBe("All found tweets have already been recreated");
   });
 
+  it("filters out image-only tweets with no real text", async () => {
+    mockAuth.mockResolvedValueOnce({
+      user: { id: "user-1" },
+      expires: "",
+    });
+    mockAccountFindFirst.mockResolvedValueOnce(fullAccount);
+
+    // Tweet text is only a t.co URL (image-only post)
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () =>
+        makeRapidAPIResponse([
+          {
+            id: "t1",
+            text: "https://t.co/abc123",
+            username: "photoguy",
+            likes: 500,
+            images: ["https://pbs.twimg.com/media/photo.jpg"],
+          },
+        ]),
+    });
+
+    mockRecreatedTweetFindMany.mockResolvedValueOnce([]);
+
+    const response = await POST(createPostRequest({ accountId: "acc-1" }));
+    const data = await response.json();
+
+    expect(data.recreated).toBe(false);
+    expect(data.message).toBe("All found tweets have already been recreated");
+  });
+
   it("filters tweets below minimum likes threshold", async () => {
     mockAuth.mockResolvedValueOnce({
       user: { id: "user-1" },

@@ -499,9 +499,14 @@ export async function POST(request: Request) {
       existingRecreations.map((r) => r.originalTweetId)
     );
 
-    const availableTweets = tweets.filter(
-      (t) => !recreatedIds.has(t.tweetId) && t.userTweet.trim().length > 0
-    );
+    const availableTweets = tweets.filter((t) => {
+      if (recreatedIds.has(t.tweetId)) return false;
+      // Strip t.co media/link URLs to check for actual text content
+      const textWithoutUrls = t.userTweet
+        .replace(/https?:\/\/t\.co\/\w+/g, "")
+        .trim();
+      return textWithoutUrls.length > 0;
+    });
 
     if (availableTweets.length === 0) {
       await createLog(
