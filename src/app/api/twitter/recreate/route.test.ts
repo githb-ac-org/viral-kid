@@ -28,11 +28,10 @@ vi.mock("@/lib/auth", () => ({
 
 // Mock twitter-api-v2
 const mockTweet = vi.fn();
-const mockUploadMedia = vi.fn();
 
 vi.mock("twitter-api-v2", () => {
   class MockTwitterApi {
-    v2 = { tweet: mockTweet, uploadMedia: mockUploadMedia };
+    v2 = { tweet: mockTweet };
     refreshOAuth2Token = vi.fn().mockResolvedValue({
       accessToken: "new-access-token",
       refreshToken: "new-refresh-token",
@@ -667,7 +666,6 @@ describe("Twitter Recreate API", () => {
     mockRecreatedTweetFindMany.mockResolvedValueOnce([]);
     mockRecreatedTweetCreate.mockResolvedValueOnce({});
     mockTweet.mockResolvedValueOnce({ data: { id: "posted-img" } });
-    mockUploadMedia.mockResolvedValueOnce("media-id-1");
 
     // RapidAPI with images
     mockFetch.mockResolvedValueOnce({
@@ -697,15 +695,17 @@ describe("Twitter Recreate API", () => {
       headers: new Headers({ "content-type": "image/png" }),
     });
 
+    // X API v2 media upload
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: { id: "media-id-1" } }),
+    });
+
     const response = await POST(createPostRequest({ accountId: "acc-1" }));
     const data = await response.json();
 
     expect(data.recreated).toBe(true);
     expect(data.mediaCount).toBe(1);
-    expect(mockUploadMedia).toHaveBeenCalledWith(expect.any(Buffer), {
-      media_type: "image/png",
-      media_category: "tweet_image",
-    });
     expect(mockTweet).toHaveBeenCalledWith({
       text: "my photo tweet",
       media: { media_ids: ["media-id-1"] },
@@ -723,7 +723,6 @@ describe("Twitter Recreate API", () => {
     mockRecreatedTweetFindMany.mockResolvedValueOnce([]);
     mockRecreatedTweetCreate.mockResolvedValueOnce({});
     mockTweet.mockResolvedValueOnce({ data: { id: "posted-fallback" } });
-    mockUploadMedia.mockResolvedValueOnce("media-fallback-1");
 
     // Custom RapidAPI response with entities.media but no extended_entities
     mockFetch.mockResolvedValueOnce({
@@ -786,16 +785,18 @@ describe("Twitter Recreate API", () => {
       headers: new Headers({ "content-type": "image/jpeg" }),
     });
 
+    // X API v2 media upload
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: { id: "media-fallback-1" } }),
+    });
+
     const response = await POST(createPostRequest({ accountId: "acc-1" }));
     const data = await response.json();
 
     expect(data.recreated).toBe(true);
     expect(data.mediaCount).toBe(1);
     expect(data.originalBy).toBe("singleimg");
-    expect(mockUploadMedia).toHaveBeenCalledWith(expect.any(Buffer), {
-      media_type: "image/jpeg",
-      media_category: "tweet_image",
-    });
   });
 
   // --- Video tweets are skipped ---

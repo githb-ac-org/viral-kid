@@ -579,18 +579,32 @@ export async function POST(request: Request) {
                 return null;
               }
 
-              const mediaId = await twitterClient.v2.uploadMedia(
-                downloaded.buffer,
+              // Use X API v2 simple upload (POST /2/media/upload)
+              const uploadResponse = await fetch(
+                "https://api.x.com/2/media/upload",
                 {
-                  media_type: downloaded.mimeType as
-                    | "image/jpeg"
-                    | "image/png"
-                    | "image/gif"
-                    | "image/webp",
-                  media_category: "tweet_image",
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    media: downloaded.buffer.toString("base64"),
+                    media_type: downloaded.mimeType,
+                    media_category: "tweet_image",
+                  }),
                 }
               );
-              return mediaId;
+
+              if (!uploadResponse.ok) {
+                const errBody = await uploadResponse.text().catch(() => "");
+                throw new Error(
+                  `Upload failed ${uploadResponse.status}: ${errBody.slice(0, 200)}`
+                );
+              }
+
+              const uploadData = await uploadResponse.json();
+              return uploadData.data?.id as string;
             } catch (error) {
               const message =
                 error instanceof Error ? error.message : "Unknown error";
