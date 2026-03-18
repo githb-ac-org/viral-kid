@@ -42,6 +42,7 @@ export async function GET(request: Request) {
           "users.read",
           "follows.read",
           "follows.write",
+          "media.write",
           "offline.access",
         ],
       }

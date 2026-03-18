@@ -32,8 +32,7 @@ const mockUploadMedia = vi.fn();
 
 vi.mock("twitter-api-v2", () => {
   class MockTwitterApi {
-    v1 = { uploadMedia: mockUploadMedia };
-    v2 = { tweet: mockTweet };
+    v2 = { tweet: mockTweet, uploadMedia: mockUploadMedia };
     refreshOAuth2Token = vi.fn().mockResolvedValue({
       accessToken: "new-access-token",
       refreshToken: "new-refresh-token",
@@ -704,59 +703,13 @@ describe("Twitter Recreate API", () => {
     expect(data.recreated).toBe(true);
     expect(data.mediaCount).toBe(1);
     expect(mockUploadMedia).toHaveBeenCalledWith(expect.any(Buffer), {
-      mimeType: "image/png",
-      target: "tweet",
+      media_type: "image/png",
+      media_category: "tweet_image",
     });
     expect(mockTweet).toHaveBeenCalledWith({
       text: "my photo tweet",
       media: { media_ids: ["media-id-1"] },
     });
-  });
-
-  it("skips image upload when OAuth 1.0a creds are missing", async () => {
-    mockAuth.mockResolvedValueOnce({
-      user: { id: "user-1" },
-      expires: "",
-    });
-    mockAccountFindFirst.mockResolvedValueOnce({
-      ...fullAccount,
-      twitterCredentials: {
-        ...validCredentials,
-        apiKey: null,
-        apiSecret: null,
-        accessTokenV1: null,
-        accessSecretV1: null,
-      },
-    });
-    mockRecreatedTweetFindMany.mockResolvedValueOnce([]);
-    mockRecreatedTweetCreate.mockResolvedValueOnce({});
-    mockTweet.mockResolvedValueOnce({ data: { id: "posted-no-img" } });
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () =>
-        makeRapidAPIResponse([
-          {
-            id: "t1",
-            text: "Tweet with pic",
-            username: "user",
-            likes: 100,
-            images: ["https://pbs.twimg.com/media/photo1.jpg"],
-          },
-        ]),
-    });
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => makeOpenRouterResponse("no image version"),
-    });
-
-    const response = await POST(createPostRequest({ accountId: "acc-1" }));
-    const data = await response.json();
-
-    expect(data.recreated).toBe(true);
-    expect(data.mediaCount).toBe(0);
-    expect(mockUploadMedia).not.toHaveBeenCalled();
   });
 
   // --- entities.media fallback ---
@@ -840,8 +793,8 @@ describe("Twitter Recreate API", () => {
     expect(data.mediaCount).toBe(1);
     expect(data.originalBy).toBe("singleimg");
     expect(mockUploadMedia).toHaveBeenCalledWith(expect.any(Buffer), {
-      mimeType: "image/jpeg",
-      target: "tweet",
+      media_type: "image/jpeg",
+      media_category: "tweet_image",
     });
   });
 
