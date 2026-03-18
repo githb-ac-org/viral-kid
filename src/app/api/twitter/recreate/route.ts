@@ -87,7 +87,7 @@ async function fetchTweetsFromRapidAPI(
     removePostsWithMedia: boolean;
   }
 ): Promise<FetchResult> {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const since = new Date(Date.now() - 48 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
   const filters = {
@@ -229,7 +229,14 @@ async function generateRecreatedText(
     .filter(Boolean)
     .join(" ");
 
-  const userMessage = `Rewrite this tweet:\n\n"${originalText}"`;
+  // Clean original text: strip t.co URLs, @mentions, and leftover whitespace
+  const cleanedText = originalText
+    .replace(/https?:\/\/t\.co\/\w+/g, "")
+    .replace(/@\w+/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  const userMessage = `Rewrite this tweet:\n\n"${cleanedText}"`;
 
   const response = await fetch(
     "https://openrouter.ai/api/v1/chat/completions",
