@@ -19,6 +19,32 @@ import {
   interpolateTemplate,
 } from "@/lib/instagram";
 import { scheduleInstagramSendDm } from "./queues";
+import { getRedisClient } from "../redis";
+
+// Lock TTL in seconds — auto-expires to prevent deadlocks if the process crashes
+const AUTOMATION_LOCK_TTL = 270; // 4.5 minutes (just under the 5-min schedule)
+
+/**
+ * Try to acquire a Redis lock. Returns true if acquired.
+ * The lock auto-expires after TTL seconds to prevent deadlocks.
+ */
+async function acquireLock(lockKey: string): Promise<boolean> {
+  const redis = getRedisClient();
+  // SET NX (only if not exists) with EX (expiry) — atomic operation
+  const result = await redis.set(
+    lockKey,
+    Date.now().toString(),
+    "EX",
+    AUTOMATION_LOCK_TTL,
+    "NX"
+  );
+  return result === "OK";
+}
+
+async function releaseLock(lockKey: string): Promise<void> {
+  const redis = getRedisClient();
+  await redis.del(lockKey);
+}
 
 // Get the base URL for internal API calls
 function getWorkerBaseUrl(): string {
@@ -68,19 +94,33 @@ async function callCronEndpoint(
 async function processRunTwitterAutomation(
   _data: RunTwitterAutomationData
 ): Promise<JobResult> {
-  console.log("Running Twitter automation via BullMQ...");
-  const result = await callCronEndpoint("/api/cron/twitter-automation");
-
-  if (!result.success) {
-    return { success: false, message: result.error };
+  const lockKey = "lock:twitter-automation";
+  const locked = await acquireLock(lockKey);
+  if (!locked) {
+    console.log("Twitter automation skipped — previous run still in progress");
+    return {
+      success: true,
+      message: "Skipped — previous Twitter automation still running",
+    };
   }
 
-  const data = result.data as { processed?: number; results?: unknown[] };
-  return {
-    success: true,
-    message: `Twitter automation completed. Processed ${data.processed || 0} accounts.`,
-    data: result.data,
-  };
+  try {
+    console.log("Running Twitter automation via BullMQ...");
+    const result = await callCronEndpoint("/api/cron/twitter-automation");
+
+    if (!result.success) {
+      return { success: false, message: result.error };
+    }
+
+    const data = result.data as { processed?: number; results?: unknown[] };
+    return {
+      success: true,
+      message: `Twitter automation completed. Processed ${data.processed || 0} accounts.`,
+      data: result.data,
+    };
+  } finally {
+    await releaseLock(lockKey);
+  }
 }
 
 async function processRunYouTubeAutomation(
