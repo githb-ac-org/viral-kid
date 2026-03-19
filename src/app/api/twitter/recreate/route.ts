@@ -146,6 +146,7 @@ async function fetchTweetsFromRapidAPI(
 
   let skippedNonTweet = 0;
   let skippedNoResult = 0;
+  let skippedNsfw = 0;
   let skippedVideo = 0;
   let skippedParseError = 0;
   const tweets: ParsedTweet[] = [];
@@ -175,6 +176,15 @@ async function fetchTweetsFromRapidAPI(
         continue;
       }
 
+      // Skip NSFW/sensitive tweets and users
+      const isSensitive =
+        result.legacy.possibly_sensitive === true ||
+        result.core.user_results.result.legacy.possibly_sensitive === true;
+      if (isSensitive) {
+        skippedNsfw++;
+        continue;
+      }
+
       const imageUrls = media
         .filter((m: { type: string }) => m.type === "photo")
         .map((m: { media_url_https: string }) => m.media_url_https);
@@ -196,7 +206,7 @@ async function fetchTweetsFromRapidAPI(
 
   debugParts.push(
     `parsed=${tweets.length}`,
-    `skipped: nonTweet=${skippedNonTweet} noResult=${skippedNoResult} video=${skippedVideo} parseErr=${skippedParseError}`
+    `skipped: nonTweet=${skippedNonTweet} noResult=${skippedNoResult} nsfw=${skippedNsfw} video=${skippedVideo} parseErr=${skippedParseError}`
   );
 
   return { tweets, debug: debugParts.join(", ") };
